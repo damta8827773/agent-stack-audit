@@ -4,6 +4,7 @@
 package discover
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -214,6 +215,7 @@ func parseSkillMD(path string, entries *[]SkillEntry, errs *[]error) {
 		return
 	}
 
+	data = stripBOM(data)
 	hasFrontmatter, fmErr := parseFrontmatter(data)
 	if fmErr != nil {
 		*errs = append(*errs, fmt.Errorf("malformed frontmatter in %s: %w", path, fmErr))
@@ -265,7 +267,7 @@ func parseManifestJSON(path, kind string, entries *[]SkillEntry, errs *[]error) 
 	}
 
 	var m jsonManifest
-	if err := json.Unmarshal(data, &m); err != nil {
+	if err := json.Unmarshal(stripBOM(data), &m); err != nil {
 		*errs = append(*errs, fmt.Errorf("malformed %s at %s: %w", kind, path, err))
 		return
 	}
@@ -305,7 +307,7 @@ func parseHooksFile(path, kind string, entries *[]SkillEntry, errs *[]error) {
 		return
 	}
 
-	hooks, err := extractHooks(data)
+	hooks, err := extractHooks(stripBOM(data))
 	if err != nil {
 		*errs = append(*errs, fmt.Errorf("malformed %s at %s: %w", kind, path, err))
 		return
@@ -345,7 +347,7 @@ func inferHookSource(path, command string) string {
 	for _, c := range candidates {
 		if data, err := os.ReadFile(c); err == nil {
 			var m jsonManifest
-			if json.Unmarshal(data, &m) == nil && m.Name != "" {
+			if json.Unmarshal(stripBOM(data), &m) == nil && m.Name != "" {
 				return m.Name
 			}
 		}
@@ -404,6 +406,15 @@ func isAlwaysOn(path string) bool {
 		return false
 	}
 	return strings.Contains(normalized, "/skills/")
+}
+
+// stripBOM removes a leading UTF-8 byte-order mark. Editors and tools on
+// Windows commonly write one (e.g. PowerShell's `Out-File`/`Set-Content
+// -Encoding utf8`) — encoding/json and a plain "---" prefix check both
+// treat it as invalid content, which would silently misreport a valid
+// config file as malformed on Windows.
+func stripBOM(data []byte) []byte {
+	return bytes.TrimPrefix(data, []byte{0xEF, 0xBB, 0xBF})
 }
 
 func expandHome(path string) string {

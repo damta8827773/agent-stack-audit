@@ -265,6 +265,90 @@ func TestScan_SymlinkLoopDetected(t *testing.T) {
 	}
 }
 
+// TestScan_UTF8BOMDoesNotBreakParsing reproduces a real bug found while
+// generating a demo fixture on Windows: PowerShell's `Set-Content -Encoding
+// utf8` writes a UTF-8 BOM, and encoding/json doesn't skip it, so a
+// perfectly valid plugin.json/hooks.json/SKILL.md would otherwise be
+// silently misreported as malformed on Windows.
+func TestScan_UTF8BOMDoesNotBreakParsing(t *testing.T) {
+	bom := []byte{0xEF, 0xBB, 0xBF}
+	root := t.TempDir()
+
+	skillsDir := filepath.Join(root, "skills")
+	skillContent := append(bom, []byte("---\nname: bom-skill\n---\nbody\n")...)
+	writeFile(t, filepath.Join(skillsDir, "bom-skill", "SKILL.md"), string(skillContent))
+
+	pluginsDir := filepath.Join(root, "plugins")
+	pluginContent := append(bom, []byte(`{"name": "bom-plugin"}`)...)
+	writeFile(t, filepath.Join(pluginsDir, "vendor", "plugin.json"), string(pluginContent))
+
+	settingsPath := filepath.Join(root, "settings.json")
+	settingsContent := append(bom, []byte(`{"hooks": {"Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "x"}]}]}}`)...)
+	writeFile(t, settingsPath, string(settingsContent))
+
+	entries, errs := NewFSScanner().Scan([]string{skillsDir, pluginsDir, settingsPath})
+	if len(errs) != 0 {
+		t.Fatalf("BOM-prefixed but otherwise valid files must not produce warnings, got: %v", errs)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries (skill + plugin + hook), got %d: %+v", len(entries), entries)
+	}
+
+	var sawSkill, sawPlugin, sawHook bool
+	for _, e := range entries {
+		switch e.Type {
+		case "skill":
+			sawSkill = true
+			if !e.HasFrontmatter {
+				t.Errorf("BOM-prefixed SKILL.md should still parse frontmatter, got HasFrontmatter=false")
+			}
+		case "plugin":
+			sawPlugin = true
+			if e.SourceSystem != "bom-plugin" {
+				t.Errorf("SourceSystem = %q, want bom-plugin", e.SourceSystem)
+			}
+		case "hook":
+			sawHook = true
+		}
+	}
+	if !sawSkill || !sawPlugin || !sawHook {
+		t.Errorf("missing an expected entry type, got: %+v", entries)
+	}
+}
+
+// TestScan_UTF8BOMDoesNotBreakHookSourceInference reproduces a second
+// instance of the same BOM bug: inferHookSource reads a sibling
+// .claude-plugin/plugin.json through its own os.ReadFile+json.Unmarshal
+// call, separate from parseManifestJSON's — fixing stripBOM in one place
+// and not the other left this path silently falling back to the vendor
+// directory name instead of the real plugin name.
+func TestScan_UTF8BOMDoesNotBreakHookSourceInference(t *testing.T) {
+	bom := []byte{0xEF, 0xBB, 0xBF}
+	root := t.TempDir()
+
+	pluginJSON := append(bom, []byte(`{"name": "superpowers"}`)...)
+	writeFile(t, filepath.Join(root, "plugins", "marketplaces", "obra", ".claude-plugin", "plugin.json"), string(pluginJSON))
+	hooksJSON := append(bom, []byte(`{"SessionStart": [{"matcher": "startup|clear|compact", "hooks": [{"type": "command", "command": "run-hook.cmd session-start"}]}]}`)...)
+	writeFile(t, filepath.Join(root, "plugins", "marketplaces", "obra", "hooks", "hooks.json"), string(hooksJSON))
+
+	entries, errs := NewFSScanner().Scan([]string{filepath.Join(root, "plugins")})
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	var hook *SkillEntry
+	for i := range entries {
+		if entries[i].Type == "hook" {
+			hook = &entries[i]
+		}
+	}
+	if hook == nil {
+		t.Fatalf("expected a hook entry, got: %+v", entries)
+	}
+	if hook.SourceSystem != "superpowers" {
+		t.Errorf("SourceSystem = %q, want superpowers (from the sibling plugin.json's own name, not the vendor dir fallback)", hook.SourceSystem)
+	}
+}
+
 func TestScan_MarketplaceJSON(t *testing.T) {
 	root := t.TempDir()
 	pluginsDir := filepath.Join(root, "plugins")
