@@ -1,0 +1,5 @@
+/audit-report/
+*.exe
+*.test
+/dist/
+.agent-stack-audit.yml
