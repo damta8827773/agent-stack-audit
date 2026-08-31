@@ -1,5 +1,7 @@
 # agent-stack-audit
 
+![agent-stack-audit banner](docs/assets/banner.svg)
+
 CLI read-only yang mengaudit skill, plugin, dan hook Claude Code - dan
 mendeteksi konflik sebelum kamu sadar sendiri.
 
