@@ -66,3 +66,19 @@ jobs:
           head -1 "$f" | grep -q '^---$' || { echo "$f missing opening frontmatter delimiter"; exit 1; }
           grep -q '^name:' "$f" || { echo "$f frontmatter missing 'name'"; exit 1; }
           grep -q '^description:' "$f" || { echo "$f frontmatter missing 'description'"; exit 1; }
+
+  no-em-dash:
+    # Permanent guard, not a one-time cleanup: fails the build if an em dash
+    # (—, U+2014) creeps back into any tracked .go or .md file.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for em dash
+        run: |
+          if grep -rn $'\xe2\x80\x94' --include='*.go' --include='*.md' .; then
+            echo ""
+            echo "Found an em dash character in a tracked .go/.md file (shown above)."
+            echo "Replace it with a plain hyphen (-)."
+            exit 1
+          fi
+          echo "No em dash found."

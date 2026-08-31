@@ -246,6 +246,11 @@ None of this is built in a vacuum. Nine projects shaped the design directly:
 | [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) | SQLite + Chroma memory architecture - the primary `memory-audit` target; also the other half of the real CONFIRMED conflict fixture |
 | [garrytan/gstack](https://github.com/garrytan/gstack) | `gstack-context-bill` and `gstack-egress` - the direct inspiration for `token-cost`, generalized to work across every skill system instead of just gstack's own (see [Comparison](#comparison)) |
 
+## FAQ
+
+See [docs/FAQ.md](docs/FAQ.md) - includes what to do if Windows flags the
+downloaded binary.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

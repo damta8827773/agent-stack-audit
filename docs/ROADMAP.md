@@ -45,6 +45,11 @@ JSON itself, regardless of what the binary's own version number does.
   overstate findings.
 - Opt-in `--check-updates` network call to check for a newer release -
   explicit flag, never automatic during `scan`.
+- Code-signed release binaries (requires a paid certificate) to reduce
+  Windows SmartScreen/Defender false-positive warnings on downloaded
+  releases - see [docs/FAQ.md](FAQ.md). `go install` (source build)
+  already sidesteps this entirely and stays the primary recommended
+  install path either way.
 
 ## Explicitly not planned
 
