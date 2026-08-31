@@ -30,3 +30,10 @@ is called out here.
 - `.github/CODEOWNERS`, `.github/AI_AGENT_NOTICE.md`, `NOTICE`, SPDX
   license headers on every `.go` file, and a documented alignment with
   NIST Cybersecurity Framework 2.0 (see docs/ARCHITECTURE.md).
+- Branch protection enabled on `main`: PR + 1 approval + all 9 CI checks
+  required, `enforce_admins: false` (single-maintainer bypass - see
+  docs/SECURITY_MODEL.md §5).
+- `docs/assets/*.png` are now regenerated with `vhs` (Charm) against a
+  checked-in demo fixture (`testdata/demo/`) instead of manual OS
+  screenshot tools - see docs/CAPTURING_SCREENSHOTS.md. Never
+  generative-AI video/images for product demos (CLAUDE.md section 2).

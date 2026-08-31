@@ -64,9 +64,14 @@ a weakness of this project specifically. What's actually enforceable:
   documented as such rather than oversold as enforcement.
 - `NOTICE` documents attribution expectations for redistribution -
   legal/social convention, not a technical mechanism either.
-
-Branch protection on `main` (requiring PR review before merge) isn't
-enabled yet: with a single maintainer, it would just block every change on
-a review nobody else can give. It's the right next step once there's a
-second regular contributor, not before.
+- **Branch protection on `main`** is enabled: every non-admin push must go
+  through a PR with 1 approving review, and all 9 CI checks (`test` x3
+  OS, `cross-build` x3 target, `validate-skill`, `fuzz`, `no-em-dash`)
+  must pass first. `enforce_admins` is deliberately `false` - with a
+  single maintainer, requiring a second reviewer that doesn't exist would
+  just block every merge, so the repo owner can still merge their own
+  work directly. This is a real, narrower guarantee than "nobody can
+  merge without review" - it's "external contributors can't merge without
+  review and passing CI"; tighten it (`enforce_admins: true`) once there's
+  a second regular contributor who can actually review the owner's PRs.
 

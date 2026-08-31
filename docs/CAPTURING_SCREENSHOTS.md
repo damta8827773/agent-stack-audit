@@ -1,53 +1,84 @@
 # Capturing Screenshots
 
 The three images in `docs/assets/` must be genuine captures of the tool
-actually running - never a mockup of a layout that hasn't been run. If you
-regenerate them, follow this process.
+actually running - never a mockup of a layout that hasn't been run. Per
+CLAUDE.md section 7, they are captured with
+[`vhs`](https://github.com/charmbracelet/vhs) (Charm - same ecosystem as
+`lipgloss`, already a dependency), from a real, checked-in demo config,
+never a hand-edited image and never generative-AI video.
 
-## macOS
+## One-time setup
 
 ```
-agent-stack-audit scan --tui
+go install github.com/charmbracelet/vhs@latest
 ```
-then `Cmd+Shift+4` to select a region, or `screencapture -w shot.png` and
-click the terminal window.
 
-## Linux
+`vhs` also needs `ffmpeg` on PATH to encode frames:
 
-`scrot -s scan-output-terminal.png` (select the window with the mouse), or
-GNOME: `gnome-screenshot -w -f scan-output-terminal.png`.
+- Windows: `winget install --id Gyan.FFmpeg.Essentials`
+- macOS: `brew install ffmpeg`
+- Linux: your package manager's `ffmpeg`
 
-## Windows
+`vhs` also shells out to `ttyd` to host the terminal it records:
 
-Windows PowerShell 5.1's default console host (legacy conhost with the
-raster font) mangles multi-byte UTF-8 characters like the em dash in
-piped/formatted text - `Get-Content`, `cmd /c type`, `chcp 65001` alone
-none of it fixes this reliably. Two options that actually work:
+- Windows: `winget install --id tsl0922.ttyd`
+- macOS/Linux: see the [ttyd README](https://github.com/tsl0922/ttyd)
 
-- **`Win+Shift+S`** (Snipping Tool) after running the command in Windows
-  Terminal (which renders UTF-8 correctly) - the simplest path if you have
-  Windows Terminal installed.
-- **Notepad** for `report.md` specifically: `notepad report.md` renders
-  Unicode correctly regardless of console quirks, and FASE 13 explicitly
-  allows an editor screenshot for the Markdown sample, not just a terminal.
-- If you must automate it (as this repo's own screenshots were produced):
-  `Add-Type -AssemblyName System.Drawing` + `Graphics.CopyFromScreen` after
-  positioning/focusing the window with a small P/Invoke `user32.dll`
-  wrapper (`SetForegroundWindow`, `MoveWindow`). A freshly-restored window
-  needs ~1-2 seconds before it repaints - capturing immediately after
-  `ShowWindow`/`MoveWindow` can grab a blank frame.
+All three binaries need to be on `PATH` (a fresh shell after `winget
+install` picks up the PATH change automatically; the current shell does
+not).
 
-## What to capture
+**Windows note:** the tapes in `docs/vhs/` deliberately don't set `Set
+Shell` and use `cmd.exe` syntax (no `./` prefix, `type` instead of `cat`).
+In testing on this platform, explicitly setting `Set Shell "bash"` or
+`Set Shell "powershell"` produced a blank recording (ttyd never rendered
+a visible prompt) even though the binaries themselves work fine - only
+vhs's unset default (which resolves to `cmd.exe` here) actually recorded
+real output. If you're on macOS/Linux and want `bash` explicitly, add
+`Set Shell "bash"` back and switch the `Type` lines to their `./binary`
+/ `cat` form - just verify it actually renders before trusting it.
 
-1. `docs/assets/scan-output-terminal.png` - `agent-stack-audit scan`
-   against a real (or realistic) config, showing the summary block.
-2. `docs/assets/conflict-example.png` - run against a fixture with a
-   deliberate hook conflict (see `internal/discover/discover_test.go`'s
-   `TestScan_RealConfirmedConflict` for the exact fixture shape - it
-   reproduces the real claude-mem/superpowers `SessionStart` conflict found
-   during FASE 0 research) so there's a CONFIRMED finding to show.
-3. `docs/assets/report-markdown-sample.png` - the resulting `report.md`,
-   opened in an editor or `cat`/`type` in a terminal that renders UTF-8
-   correctly.
+## The demo config
 
-Crop to just the window content - no need to show the whole desktop.
+`testdata/demo/claude-config/` is a small, self-contained,
+checked-in fixture tree - not anyone's real `~/.claude`. It reproduces the
+real claude-mem/superpowers `SessionStart` matcher collision found during
+FASE 0 research (same shape as
+`internal/discover/discover_test.go`'s `TestScan_RealConfirmedConflict`),
+plus two always-on skills for a non-zero token-cost figure.
+
+`testdata/demo/claude-mem-data/claude-mem.db` is generated, not checked
+in (it's a binary SQLite file) - build it once with:
+
+```
+go run ./tools/makedemo-db testdata/demo/claude-mem-data/claude-mem.db
+```
+
+This gives memory-audit a real `.db` file to report metadata and table
+names for, with placeholder row content only - the tool never reads that
+content either way, but a demo screenshot showing table names next to a
+"row content is never read" claim should be backed by an actual table, not
+an empty file.
+
+## Regenerating the three images
+
+From the repo root, after building the binary:
+
+```
+go build -o agent-stack-audit.exe ./cmd/agent-stack-audit
+vhs docs/vhs/scan-output-terminal.tape
+vhs docs/vhs/conflict-example.tape
+vhs docs/vhs/report-markdown-sample.tape
+```
+
+Each `.tape` script sets `CLAUDE_CONFIG_DIR` / `CLAUDE_MEM_DATA_DIR` to
+point at the demo fixture (never a real machine's config), runs the
+actual binary, and takes a `Screenshot` into `docs/assets/`. The `.gif`
+files each tape also produces under `docs/vhs/` are scratch output
+(gitignored) - only the `.png` screenshots are committed.
+
+## If you need to change what the demo shows
+
+Edit the fixture files under `testdata/demo/claude-config/`, not the
+`.tape` scripts - the tapes just run `scan` and screenshot the result,
+they don't construct any of the example data themselves.

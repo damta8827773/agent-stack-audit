@@ -1,0 +1,4 @@
+{
+  "name": "claude-mem",
+  "description": "Persistent memory across Claude Code sessions, backed by SQLite and a Chroma vector store."
+}

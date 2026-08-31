@@ -3,3 +3,6 @@
 *.test
 /dist/
 .agent-stack-audit.yml
+/testdata/demo/out/
+/testdata/demo/claude-mem-data/claude-mem.db
+/docs/vhs/*.gif

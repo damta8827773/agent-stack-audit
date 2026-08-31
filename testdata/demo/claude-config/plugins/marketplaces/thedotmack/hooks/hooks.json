@@ -1,0 +1,8 @@
+{
+  "SessionStart": [
+    {
+      "matcher": "startup|clear|compact",
+      "hooks": [{"type": "command", "command": "claude-mem-session-start.js"}]
+    }
+  ]
+}

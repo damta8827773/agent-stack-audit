@@ -87,13 +87,14 @@ JSON itself, regardless of what the binary's own version number does.
 
 Shipped: `.github/CODEOWNERS` (review required on `internal/memoryaudit`
 and `internal/vulnaudit`), `.github/AI_AGENT_NOTICE.md`, `NOTICE`, SPDX
-headers on every `.go` file.
+headers on every `.go` file, and branch protection on `main` (PR + 1
+approval + all 9 CI checks required, `enforce_admins: false` so the
+single maintainer can still merge their own work - see
+[docs/SECURITY_MODEL.md](SECURITY_MODEL.md) §5).
 
 Not yet shipped:
-- Branch protection on `main` - deliberately held off while there's a
-  single maintainer; see [docs/SECURITY_MODEL.md](SECURITY_MODEL.md) §5
-  for why turning it on now would just block every PR on a review nobody
-  else can give. Revisit once there's a second regular contributor.
+- Tightening branch protection to `enforce_admins: true` once there's a
+  second regular contributor who can review the owner's own PRs.
 - Signed commits (GPG or Sigstore/`gitsign`) requirement - documented
   intent, not yet enforced.
 - `cosign`-signed release checksums and a CycloneDX SBOM per release -
