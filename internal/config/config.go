@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package config resolves scan locations and loads the optional
 // .agent-stack-audit.yml file. It is the only package that knows about
 // environment variable overrides (CLAUDE_CONFIG_DIR, CLAUDE_MEM_DATA_DIR),

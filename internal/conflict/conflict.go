@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package conflict detects hooks from different source systems registered
 // on overlapping event+matcher combinations. This is pattern matching on
 // matcher strings, not static analysis of what the hook commands actually

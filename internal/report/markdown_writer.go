@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package report
 
 import (
@@ -39,7 +41,11 @@ func Render(r Report) string {
 	fmt.Fprintf(&b, "| Konflik ditemukan | %s |\n", formatThousands(r.Summary.ConflictsFound))
 	fmt.Fprintf(&b, "| Estimasi token overhead | ~%s token |\n", formatThousands(r.Summary.EstimatedTokenOverhead))
 	fmt.Fprintf(&b, "| Memory store ditemukan | %s |\n", formatThousands(r.Summary.MemoryStoresFound))
-	fmt.Fprintf(&b, "| Peringatan trust | %s |\n\n", formatThousands(r.Summary.TrustWarnings))
+	fmt.Fprintf(&b, "| Peringatan trust | %s |\n", formatThousands(r.Summary.TrustWarnings))
+	if len(r.VulnAudit) > 0 {
+		fmt.Fprintf(&b, "| Kerentanan ditemukan | %s |\n", formatThousands(r.Summary.VulnerabilitiesFound))
+	}
+	b.WriteString("\n")
 
 	b.WriteString("## Konflik Hook\n\n")
 	if len(r.Conflicts) == 0 {
@@ -89,6 +95,30 @@ func Render(r Report) string {
 		fmt.Fprintf(&b, "### %s - %s\n", t.ID, t.Confidence)
 		fmt.Fprintf(&b, "- Temuan: %s\n", t.Finding)
 		fmt.Fprintf(&b, "- Path: %s\n\n", t.Path)
+	}
+
+	if len(r.VulnAudit) > 0 {
+		// Only rendered when --vuln-check actually ran - unlike the other
+		// sections, "0 vulnerabilities" would be misleading if the check
+		// never ran at all, so this section is absent (not "tidak ada
+		// temuan") when vuln-audit wasn't invoked this scan.
+		b.WriteString("## Vuln Audit\n\n")
+		b.WriteString("| ID | Package | Terpasang | Fix | Severity |\n|---|---|---|---|---|\n")
+		for _, v := range r.VulnAudit {
+			severity := v.Severity
+			if severity == "" {
+				severity = "(tidak dilaporkan OSV/GHSA)"
+			}
+			fixed := v.FixedVersion
+			if fixed == "" {
+				fixed = "-"
+			}
+			fmt.Fprintf(&b, "| [%s](%s) | %s (%s) | %s | %s | %s |\n",
+				v.VulnerabilityID, v.AdvisoryURL, v.Package, v.Ecosystem, v.InstalledVersion, fixed, severity)
+		}
+		b.WriteString("\nSumber: OSV.dev/GitHub Advisory Database. Pencocokan versi terhadap\n")
+		b.WriteString("advisory publik, BUKAN static/dynamic analysis kode. Kerentanan zero-day\n")
+		b.WriteString("yang belum dipublikasikan tidak akan terdeteksi.\n\n")
 	}
 
 	b.WriteString("---\n")

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package main
 
 import (
@@ -199,6 +201,77 @@ func TestRun_FixWithNoConfirmedConflicts(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "tidak ada konflik CONFIRMED") {
 		t.Errorf("expected the no-CONFIRMED-conflicts message, got: %s", stdout.String())
+	}
+}
+
+func TestRun_VulnCheckPromptsAndDoesNothingWithoutConsent(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	// "n" declines consent - if this test ever reaches a real network call
+	// it's a bug: declining must short-circuit before any HTTP request.
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"scan", "--destination", dest, "--vuln-check"}, strings.NewReader("n\n"), &stdout, &stderr)
+	if code != 1 { // the fixture's own CONFIRMED conflict still applies
+		t.Fatalf("exit code = %d, want 1, stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "osv.dev") {
+		t.Errorf("expected the consent prompt mentioning osv.dev, got: %s", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "dibatalkan") {
+		t.Errorf("expected a cancellation acknowledgement, got: %s", stdout.String())
+	}
+
+	data, err := os.ReadFile(filepath.Join(dest, "report.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed map[string]interface{}
+	json.Unmarshal(data, &parsed)
+	if vulns, ok := parsed["vuln_audit"]; ok && len(vulns.([]interface{})) != 0 {
+		t.Errorf("expected no vuln_audit entries when consent was declined, got: %v", vulns)
+	}
+}
+
+func TestRun_VulnCheckWithoutFlagNeverPrompts(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	var stdout, stderr bytes.Buffer
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
+	if strings.Contains(stdout.String(), "osv.dev") {
+		t.Errorf("vuln-check prompt should never appear without --vuln-check, got: %s", stdout.String())
+	}
+}
+
+func TestRun_VulnCheckNoManifestsFound(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	// "y" consents, but the fixture has no go.mod/package.json/requirements.txt
+	// anywhere, so this must stop before ever making an HTTP request.
+	var stdout, stderr bytes.Buffer
+	Run([]string{"scan", "--destination", dest, "--vuln-check"}, strings.NewReader("y\n"), &stdout, &stderr)
+	if !strings.Contains(stdout.String(), "tidak ada manifest dependency") {
+		t.Errorf("expected the no-manifests message, got: %s", stdout.String())
 	}
 }
 

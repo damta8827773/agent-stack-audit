@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package tokencost estimates the token overhead of always-on skill
 // instructions using per-content-type character-to-token ratios. This is
 // still an approximation, not a real tokenizer - FASE 5 requires the

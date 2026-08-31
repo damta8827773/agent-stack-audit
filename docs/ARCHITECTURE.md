@@ -11,10 +11,12 @@ flowchart TD
     C --> E[token-cost]
     C --> F[memory-audit]
     C --> G[trust-report]
+    C -.->|--vuln-check only,<br/>consent prompt first| L[vuln-audit: OSV.dev]
     D --> H[Aggregator]
     E --> H
     F --> H
     G --> H
+    L -.-> H
     H --> I[report.md]
     H --> J[report.json]
     H --> K[terminal summary]
@@ -35,6 +37,8 @@ internal/conflict/       hook event+matcher overlap detection (CONFIRMED/LIKELY/
 internal/tokencost/      char-ratio token estimate for always-on skills
 internal/memoryaudit/    metadata-only report on known memory stores, schema-only SQLite read
 internal/trustreport/    LICENSE/SECURITY.md presence, world-writable dirs, network-calling hooks, undocumented scripts
+internal/vulnaudit/      go.mod/package.json/requirements.txt manifest parsing + OSV.dev query (opt-in, --vuln-check)
+internal/fix/            CONFIRMED-conflict suggestions for --fix; never edits another tool's files
 internal/report/         DTOs matching report.json's schema, aggregator, JSON writer, Markdown writer
 internal/tui/            lipgloss terminal summary render
 internal/version/        single Version constant
@@ -75,3 +79,27 @@ implementation:
 
 See [docs/LIMITATIONS.md](LIMITATIONS.md) for what these modules
 deliberately don't attempt.
+
+## Standards alignment
+
+This is a one-person project, not a certified product - nothing here is an
+ISO 27001 certification or a claim of formal compliance (that's an
+organizational audit process, not something open source software can
+claim for itself). What follows is honest: which NIST Cybersecurity
+Framework 2.0 function each module's behavior lines up with.
+
+| NIST CSF function | agent-stack-audit module |
+|---|---|
+| Identify | `discover` - identifies installed assets (skills/plugins/hooks) |
+| Protect | `trust-report` - permission checks, LICENSE/SECURITY.md presence |
+| Detect | `conflict-check`, `vuln-audit` - overlapping hooks, known CVEs |
+| Respond | Reports + manual suggestions (`--fix`); no auto-response in v0.1 |
+| Recover | Not yet implemented - see [docs/ROADMAP.md](ROADMAP.md)'s hash-chained audit log / `verify-log` item |
+
+Also followed, and actually verifiable (unlike a certification claim):
+[SPDX License Identifiers](https://spdx.dev/) on every `.go` file,
+[Semantic Versioning 2.0.0](https://semver.org/), [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
+[Conventional Commits 1.0.0](https://www.conventionalcommits.org/), and the
+[OWASP CLI Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Command_Line_Cheat_Sheet.html)'s
+core principles (least privilege - read-only by default; no default
+credentials; path validation during directory walks).

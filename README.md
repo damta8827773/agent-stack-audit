@@ -53,6 +53,7 @@ them (auto-detected - degrades to plain text otherwise, as shown here).
 | `token-cost` | Estimates context-window overhead from always-on skill instructions |
 | `memory-audit` | Reports metadata (path, size, last-write time, permission) for known local memory stores - never their content |
 | `trust-report` | Flags missing LICENSE/SECURITY.md, world-writable skill dirs, hooks calling external URLs or raw IP addresses, undocumented executable scripts, generic/buzzword-heavy skill descriptions, base64-blob/eval-obfuscation patterns in hook commands and script content |
+| `vuln-audit` (opt-in, `--vuln-check`) | Matches Go/npm/PyPI dependency manifests against OSV.dev's public advisory database - the only module that makes a network call, and only after an explicit consent prompt every scan |
 
 A real `conflict-check` finding, reproducing an actual conflict found during
 this project's own research (claude-mem and superpowers both register
@@ -220,6 +221,34 @@ tool actually owns that config. This isn't a scope agent-stack-audit plans
 to grow into: modifying another tool's installed files is exactly the kind
 of blast radius design principle 1 (read-only by default) exists to avoid.
 
+### `--vuln-check` only knows what OSV/GHSA have published
+
+`vuln-audit` matches dependency versions found in a skill/plugin's own
+manifest (`go.mod`, `package.json`/`package-lock.json`,
+`requirements.txt`) against OSV.dev's public advisory database. Three
+boundaries that matter:
+
+- **Zero-days aren't in scope.** A vulnerability nobody has published yet
+  cannot be detected by version matching against a public database, by
+  definition. This tells you about *known, disclosed* issues only.
+- **Not SAST/DAST.** There is no analysis of the dependency's actual code
+  - no disassembly, no execution, no data-flow analysis. This is purely
+  "does this exact version appear in a published advisory's affected
+  range," the same technique `npm audit`/`pip-audit`/`govulncheck` use.
+- **Not a pentest substitute.** A clean `vuln-audit` result means "no
+  known CVE matches the exact versions this tool could parse out of your
+  manifests" - it says nothing about custom code, misconfigurations, or
+  anything a professional security review would catch.
+
+Only three ecosystems are parsed in v0.1 (Go, npm, PyPI), and even then
+only exact pinned versions count - a `package.json` range like `^1.2.3`
+or a `requirements.txt` line like `flask>=2.0.0` is skipped rather than
+guessed at, because querying OSV with a guessed version would be worse
+than not checking that package at all. This is also the only part of
+agent-stack-audit that ever makes a network call, and it never does so
+without printing exactly what will be sent and waiting for an explicit
+`y` - every scan, with no flag to silence the prompt.
+
 ## Comparison
 
 agent-stack-audit generalizes ideas from gstack's own audit tooling to work
@@ -236,6 +265,18 @@ This isn't a claim that agent-stack-audit is a strictly better tool -
 this project's flat char-ratio estimate for gstack's own skills
 specifically. It's a different, narrower job done well versus a broader,
 cruder one done across everything installed.
+
+## Standards alignment
+
+This is a one-person project, not a certified product - nothing here is an
+ISO 27001 certification (that's an organizational audit process, not
+something open source software can claim for itself). What's real:
+module behavior lines up with NIST Cybersecurity Framework 2.0's five
+functions (full table in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)),
+every `.go` file carries an [SPDX License Identifier](https://spdx.dev/),
+and the project follows [Semantic Versioning 2.0.0](https://semver.org/),
+[Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), and
+[Conventional Commits 1.0.0](https://www.conventionalcommits.org/).
 
 ## Configuration
 

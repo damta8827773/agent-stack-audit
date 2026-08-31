@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package memoryaudit reports metadata about local memory/state stores -
 // path, size, last-write time, and whether the permission bits allow
 // group/other to read it. It never opens a store to read actual record

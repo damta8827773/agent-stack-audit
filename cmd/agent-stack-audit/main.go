@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Command agent-stack-audit is a read-only CLI that scans installed Claude
 // Code skills, plugins, and hooks and reports conflicts, token overhead,
 // memory-store metadata, and basic trust findings. It never modifies
@@ -24,6 +26,7 @@ import (
 	"github.com/damta8827773/agent-stack-audit/internal/trustreport"
 	"github.com/damta8827773/agent-stack-audit/internal/tui"
 	"github.com/damta8827773/agent-stack-audit/internal/version"
+	"github.com/damta8827773/agent-stack-audit/internal/vulnaudit"
 )
 
 func main() {
@@ -76,6 +79,11 @@ Scan flags:
   --fix                 after scanning, suggest manual fixes for CONFIRMED conflicts and
                          offer to write them to <destination>/suggested-fixes.md (asks for
                          confirmation first; never edits any plugin/skill file itself)
+  --vuln-check          check discovered skills'/plugins' dependency manifests (go.mod,
+                         package.json, requirements.txt) against OSV.dev's public
+                         vulnerability database. Sends package name+version only, never
+                         file content - shows an explicit consent prompt before any
+                         network call, every scan (this is the only network-touching flag)
 
 Exit codes:
   0  scan succeeded, no CONFIRMED findings
@@ -128,6 +136,7 @@ func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	configPath := fs.String("config", config.DefaultConfigFile, "path to .agent-stack-audit.yml")
 	destination := fs.String("destination", "", "output directory")
 	fixFlag := fs.Bool("fix", false, "suggest manual fixes for CONFIRMED conflicts (never edits plugin/skill files)")
+	vulnCheck := fs.Bool("vuln-check", false, "check dependency manifests against OSV.dev (network call, asks for consent first)")
 
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -190,6 +199,11 @@ func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		trustFindings = trustreport.NewChecker().Report(discoverEntries)
 	}
 
+	var vulnFindings []vulnaudit.Finding
+	if *vulnCheck {
+		vulnFindings = runVulnCheck(discoverEntries, stdin, stdout)
+	}
+
 	r := report.Build(report.BuildInput{
 		Host:        runtime.GOOS + "-" + runtime.GOARCH,
 		Discover:    discoverEntries,
@@ -197,6 +211,7 @@ func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		TokenCost:   tokenCost,
 		MemoryAudit: memEntries,
 		TrustReport: trustFindings,
+		VulnAudit:   vulnFindings,
 	})
 
 	if outputFormat == "json" || outputFormat == "both" {
@@ -286,6 +301,44 @@ func runFix(conflicts []conflict.Conflict, dest string, stdin io.Reader, stdout 
 	return nil
 }
 
+// runVulnCheck implements Lampiran K.2's consent requirement verbatim:
+// vuln-audit is the one module that ever leaves the machine, so it always
+// shows what will be sent and waits for an explicit "y" before sending
+// anything - every single scan, not just the first one, and there is no
+// flag to suppress this prompt.
+func runVulnCheck(entries []discover.SkillEntry, stdin io.Reader, stdout io.Writer) []vulnaudit.Finding {
+	fmt.Fprintln(stdout, "\nvuln-audit akan mengirim daftar nama+versi dependency (BUKAN kode")
+	fmt.Fprintln(stdout, "sumber, BUKAN isi file) ke osv.dev untuk dicocokkan. Lanjutkan? [y/N]")
+	if !isYes(readLine(stdin)) {
+		fmt.Fprintln(stdout, "vuln-check dibatalkan.")
+		return nil
+	}
+
+	dirs := skillPluginDirs(entries)
+	deps := vulnaudit.FindManifests(dirs)
+	if len(deps) == 0 {
+		fmt.Fprintln(stdout, "vuln-check: tidak ada manifest dependency (go.mod/package.json/requirements.txt) ditemukan.")
+		return nil
+	}
+	return vulnaudit.NewQuerier().Query(deps)
+}
+
+func skillPluginDirs(entries []discover.SkillEntry) []string {
+	seen := map[string]bool{}
+	var dirs []string
+	for _, e := range entries {
+		if e.Type != "skill" && e.Type != "plugin" {
+			continue
+		}
+		dir := filepath.Dir(e.Path)
+		if !seen[dir] {
+			seen[dir] = true
+			dirs = append(dirs, dir)
+		}
+	}
+	return dirs
+}
+
 func readLine(r io.Reader) string {
 	scanner := bufio.NewScanner(r)
 	if !scanner.Scan() {
@@ -307,6 +360,11 @@ func hasConfirmed(r report.Report) bool {
 	}
 	for _, t := range r.TrustReport {
 		if t.Confidence == "CONFIRMED" {
+			return true
+		}
+	}
+	for _, v := range r.VulnAudit {
+		if v.Confidence == "CONFIRMED" {
 			return true
 		}
 	}

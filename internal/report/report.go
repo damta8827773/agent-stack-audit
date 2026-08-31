@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package report aggregates every module's output into the report.json
 // schema (FASE 2 / 8.1) and writes it as Markdown and/or JSON.
 package report
@@ -12,6 +14,7 @@ type Report struct {
 	TokenCost     []TokenCostEntry   `json:"token_cost"`
 	MemoryAudit   []MemoryAuditEntry `json:"memory_audit"`
 	TrustReport   []TrustReportEntry `json:"trust_report"`
+	VulnAudit     []VulnAuditEntry   `json:"vuln_audit,omitempty"`
 }
 
 type Summary struct {
@@ -21,6 +24,7 @@ type Summary struct {
 	EstimatedTokenOverhead int `json:"estimated_token_overhead"`
 	MemoryStoresFound      int `json:"memory_stores_found"`
 	TrustWarnings          int `json:"trust_warnings"`
+	VulnerabilitiesFound   int `json:"vulnerabilities_found"`
 }
 
 type DiscoverEntry struct {
@@ -68,6 +72,21 @@ type TrustReportEntry struct {
 	Confidence string `json:"confidence"`
 	Finding    string `json:"finding"`
 	Path       string `json:"path"`
+}
+
+// VulnAuditEntry is Lampiran K.4's schema exactly: severity comes straight
+// from OSV/GHSA's own data (see internal/vulnaudit), never computed here.
+type VulnAuditEntry struct {
+	ID               string `json:"id"`
+	Confidence       string `json:"confidence"`
+	Ecosystem        string `json:"ecosystem"`
+	Package          string `json:"package"`
+	InstalledVersion string `json:"installed_version"`
+	VulnerabilityID  string `json:"vulnerability_id"`
+	Severity         string `json:"severity"`
+	FixedVersion     string `json:"fixed_version"`
+	SourcePath       string `json:"source_path"`
+	AdvisoryURL      string `json:"advisory_url"`
 }
 
 type Writer interface {

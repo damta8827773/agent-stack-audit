@@ -5,23 +5,30 @@
 agent-stack-audit only needs READ access to the config directories it scans
 (`~/.claude/skills`, `~/.claude/plugins`, `~/.claude/settings.json`, the
 project-level `.claude/` equivalents, plus the known memory-store
-locations). It never writes to, moves, or deletes anything it finds. If a
-future `--fix` flag is added (not before v0.2, per the design principles),
-it will be opt-in and require interactive confirmation for every individual
-change - never a silent bulk operation.
+locations). It never writes to, moves, or deletes anything it finds, except
+its own output files (`report.md`/`report.json`/`suggested-fixes.md`, all
+under `<destination>`, never a plugin/skill's own files). `--fix` is opt-in
+and requires an explicit `y` confirmation before writing anything - never a
+silent bulk operation.
 
-## 2. No data leaves the machine
+## 2. No data leaves the machine, except one explicit opt-in flag
 
-The default build makes zero network calls. Every module in v0.1 -
-`discover`, `conflict-check`, `token-cost`, `memory-audit`, `trust-report` -
-operates entirely on the local filesystem. Planned future features that do
-need network access (`--check-updates` to check for a newer release,
-`--exact` to call the real `count_tokens` API for precise token counts)
-will each require their own explicit flag and print an egress warning
-before sending anything, following the egress-receipt pattern gstack uses
-for the same problem - the design pattern is a reference point, not shared
-code; agent-stack-audit's own implementation (if and when built) will be
-independent.
+Every module runs entirely on the local filesystem by default -
+`discover`, `conflict-check`, `token-cost`, `memory-audit`, `trust-report`,
+and `--fix`'s suggestions never make a network call. The one exception:
+`scan --vuln-check` sends package name+version (never file content, never
+source code) to OSV.dev to check against known vulnerabilities, and it
+always prints exactly what will be sent and waits for an explicit `y`
+before doing so - every scan, with no flag to suppress that prompt. See
+`internal/vulnaudit` and [docs/LIMITATIONS.md](LIMITATIONS.md).
+
+Still-planned future features that would need network access
+(`--check-updates` to check for a newer release, `--exact` to call the
+real `count_tokens` API for precise token counts) will each require their
+own explicit flag and the same egress-warning treatment, following the
+egress-receipt pattern gstack uses for the same problem - the design
+pattern is a reference point, not shared code; agent-stack-audit's own
+implementation (if and when built) is independent.
 
 ## 3. Memory content is never read
 
@@ -42,3 +49,24 @@ counting them, is a critical bug regardless of how it's justified - see
 
 See [SECURITY.md](../SECURITY.md) for the reporting process (GitHub Security
 Advisory or email, target 48-hour acknowledgment).
+
+## 5. Repo integrity (what's real vs. what's just policy)
+
+Anyone can read or fork a public repo - that's how open source works, not
+a weakness of this project specifically. What's actually enforceable:
+
+- **CODEOWNERS** (`.github/CODEOWNERS`) requires review on
+  `internal/memoryaudit/` and `internal/vulnaudit/` changes - the two
+  modules where a bug would matter most (memory content leaking, or an
+  unexpected network call).
+- `.github/AI_AGENT_NOTICE.md` is explicitly **not** a technical control -
+  it's a written policy statement for any AI agent reading this repo,
+  documented as such rather than oversold as enforcement.
+- `NOTICE` documents attribution expectations for redistribution -
+  legal/social convention, not a technical mechanism either.
+
+Branch protection on `main` (requiring PR review before merge) isn't
+enabled yet: with a single maintainer, it would just block every change on
+a review nobody else can give. It's the right next step once there's a
+second regular contributor, not before.
+

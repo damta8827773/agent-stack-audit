@@ -1,11 +1,18 @@
 # FAQ
 
 **"Apakah tool ini bisa memperbaiki konflik secara otomatis?"**
-Tidak di v0.1. Read-only. `--fix` masuk roadmap v0.2+ dengan konfirmasi
-interaktif per perubahan, tidak pernah otomatis/silent.
+Tidak. `scan --fix` cuma mencetak saran manual dan (setelah konfirmasi `y`
+eksplisit) menulis saran itu ke `suggested-fixes.md` sendiri - tidak
+pernah mengedit file plugin/skill orang lain. Menerapkan saran itu tetap
+langkah manual yang Anda lakukan sendiri.
 
 **"Apakah data saya dikirim ke server mana pun?"**
-Tidak. Semua scan lokal, tanpa network call default. Lihat
+Secara default: tidak. Satu pengecualian eksplisit: `scan --vuln-check`
+mengirim nama+versi dependency (BUKAN isi file, BUKAN kode sumber) ke
+osv.dev untuk dicocokkan dengan database kerentanan publik - dan itu
+cuma jalan kalau Anda pakai flag itu SENDIRI, dengan prompt konfirmasi
+`[y/N]` yang selalu muncul dulu, setiap kali, tidak ada cara
+mematikan prompt-nya. Tanpa flag itu, semua scan lokal murni. Lihat
 [docs/SECURITY_MODEL.md](SECURITY_MODEL.md).
 
 **"Kenapa tidak dukung Cursor/Codex di v0.1?"**
@@ -33,3 +40,12 @@ github.com/damta8827773/agent-stack-audit/cmd/agent-stack-audit@latest`
 memang jalur instalasi utama yang direkomendasikan README. Code-signing
 binary release adalah opsi masa depan (butuh sertifikat berbayar), dicatat
 di [docs/ROADMAP.md](ROADMAP.md), belum ada di v0.1.
+
+**"Apakah `--vuln-check` sama dengan scan malware/antivirus?"**
+Tidak. Ini murni cocokkan versi package (dari `go.mod`/`package.json`/
+`requirements.txt`) terhadap database advisory publik OSV.dev/GitHub
+Advisory - sama persis teknik yang dipakai `npm audit`/`pip-audit`/
+`govulncheck`. Tidak ada disassembly, tidak ada eksekusi kode, tidak ada
+deteksi zero-day (kerentanan yang belum dipublikasikan tidak mungkin
+terdeteksi lewat pencocokan versi, secara definisi). Lihat
+[docs/LIMITATIONS.md](LIMITATIONS.md) untuk batasan lengkapnya.

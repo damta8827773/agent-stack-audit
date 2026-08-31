@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package fix generates human-readable suggestions for CONFIRMED conflicts.
 // It never writes to, or even knows the location of, another tool's
 // config/hook files - suggestions describe what to change and where in

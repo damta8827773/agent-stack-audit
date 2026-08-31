@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package tui renders the scan summary for the terminal using lipgloss.
 // lipgloss's default renderer detects terminal capability on its own and
 // downgrades to plain text automatically when stdout isn't a color-capable
@@ -38,6 +40,12 @@ func Render(r report.Report) string {
 	fmt.Fprintf(&b, "%s ~%d token\n", labelStyle.Render("Estimasi token overhead:"), r.Summary.EstimatedTokenOverhead)
 	fmt.Fprintf(&b, "%s %d\n", labelStyle.Render("Memory store ditemukan:"), r.Summary.MemoryStoresFound)
 	fmt.Fprintf(&b, "%s %d\n", labelStyle.Render("Peringatan trust:"), r.Summary.TrustWarnings)
+	if len(r.VulnAudit) > 0 {
+		// Only shown when --vuln-check actually ran, same reasoning as the
+		// Markdown writer: "0 kerentanan" would misleadingly imply a check
+		// happened when it didn't.
+		fmt.Fprintf(&b, "%s %d\n", labelStyle.Render("Kerentanan ditemukan:"), r.Summary.VulnerabilitiesFound)
+	}
 
 	if len(r.Conflicts) > 0 {
 		b.WriteString("\n" + titleStyle.Render("Konflik Hook") + "\n")
@@ -52,6 +60,19 @@ func Render(r report.Report) string {
 		b.WriteString("\n" + titleStyle.Render("Trust Report") + "\n")
 		for _, t := range r.TrustReport {
 			b.WriteString(confidenceStyle(t.Confidence).Render(fmt.Sprintf("[%s] %s - %s", t.Confidence, t.ID, t.Finding)))
+			b.WriteString("\n")
+		}
+	}
+
+	if len(r.VulnAudit) > 0 {
+		b.WriteString("\n" + titleStyle.Render("Vuln Audit") + "\n")
+		for _, v := range r.VulnAudit {
+			severity := v.Severity
+			if severity == "" {
+				severity = "severity tidak dilaporkan"
+			}
+			b.WriteString(confidenceStyle(v.Confidence).Render(
+				fmt.Sprintf("[%s] %s %s (%s) - fix: %s, %s", v.Confidence, v.Package, v.InstalledVersion, v.VulnerabilityID, v.FixedVersion, severity)))
 			b.WriteString("\n")
 		}
 	}

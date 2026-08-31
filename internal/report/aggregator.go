@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package report
 
 import (
@@ -8,6 +10,7 @@ import (
 	"github.com/damta8827773/agent-stack-audit/internal/memoryaudit"
 	"github.com/damta8827773/agent-stack-audit/internal/tokencost"
 	"github.com/damta8827773/agent-stack-audit/internal/trustreport"
+	"github.com/damta8827773/agent-stack-audit/internal/vulnaudit"
 )
 
 const SchemaVersion = "1.0"
@@ -24,6 +27,7 @@ type BuildInput struct {
 	TokenCost   []tokencost.Entry
 	MemoryAudit []memoryaudit.Entry
 	TrustReport []trustreport.Finding
+	VulnAudit   []vulnaudit.Finding
 }
 
 func Build(in BuildInput) Report {
@@ -95,6 +99,22 @@ func Build(in BuildInput) Report {
 		})
 	}
 
+	vulnEntries := make([]VulnAuditEntry, 0, len(in.VulnAudit))
+	for _, v := range in.VulnAudit {
+		vulnEntries = append(vulnEntries, VulnAuditEntry{
+			ID:               v.ID,
+			Confidence:       v.Confidence,
+			Ecosystem:        v.Ecosystem,
+			Package:          v.Package,
+			InstalledVersion: v.InstalledVersion,
+			VulnerabilityID:  v.VulnerabilityID,
+			Severity:         v.Severity,
+			FixedVersion:     v.FixedVersion,
+			SourcePath:       v.SourcePath,
+			AdvisoryURL:      v.AdvisoryURL,
+		})
+	}
+
 	return Report{
 		SchemaVersion: SchemaVersion,
 		ScannedAt:     time.Now().UTC().Format(time.RFC3339),
@@ -106,11 +126,13 @@ func Build(in BuildInput) Report {
 			EstimatedTokenOverhead: totalTokens,
 			MemoryStoresFound:      len(memEntries),
 			TrustWarnings:          len(trustEntries),
+			VulnerabilitiesFound:   len(vulnEntries),
 		},
 		Discover:    discoverEntries,
 		Conflicts:   conflictEntries,
 		TokenCost:   tokenEntries,
 		MemoryAudit: memEntries,
 		TrustReport: trustEntries,
+		VulnAudit:   vulnEntries,
 	}
 }

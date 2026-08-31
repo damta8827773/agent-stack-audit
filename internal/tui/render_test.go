@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package tui
 
 import (
@@ -50,5 +52,43 @@ func TestRender_ShowsTrustFindings(t *testing.T) {
 	out := Render(r)
 	if !strings.Contains(out, "trust-001") || !strings.Contains(out, "LICENSE") {
 		t.Errorf("rendered output missing trust finding details:\n%s", out)
+	}
+}
+
+func TestRender_ShowsVulnFindingsWhenPresent(t *testing.T) {
+	r := report.Report{
+		Summary: report.Summary{VulnerabilitiesFound: 1},
+		VulnAudit: []report.VulnAuditEntry{
+			{
+				Confidence: "CONFIRMED", Package: "lodash", InstalledVersion: "4.17.15",
+				VulnerabilityID: "GHSA-xxxx", FixedVersion: "4.17.21", Severity: "HIGH",
+			},
+		},
+	}
+	out := Render(r)
+	if !strings.Contains(out, "lodash") || !strings.Contains(out, "GHSA-xxxx") || !strings.Contains(out, "HIGH") {
+		t.Errorf("rendered output missing vuln finding details:\n%s", out)
+	}
+	if !strings.Contains(out, "Kerentanan ditemukan:") {
+		t.Errorf("expected the vuln count summary line, got:\n%s", out)
+	}
+}
+
+func TestRender_OmitsVulnSectionWhenNotRun(t *testing.T) {
+	out := Render(report.Report{})
+	if strings.Contains(out, "Vuln Audit") || strings.Contains(out, "Kerentanan ditemukan") {
+		t.Errorf("expected no vuln-audit mention when the check never ran, got:\n%s", out)
+	}
+}
+
+func TestRender_VulnFindingMissingSeverityShowsPlaceholder(t *testing.T) {
+	r := report.Report{
+		VulnAudit: []report.VulnAuditEntry{
+			{Confidence: "CONFIRMED", Package: "x", VulnerabilityID: "OSV-1"},
+		},
+	}
+	out := Render(r)
+	if !strings.Contains(out, "severity tidak dilaporkan") {
+		t.Errorf("expected the no-severity placeholder, got:\n%s", out)
 	}
 }

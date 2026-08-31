@@ -139,3 +139,33 @@ applying a suggestion is always something you do yourself, in whatever
 tool actually owns that config. This isn't a scope agent-stack-audit plans
 to grow into: modifying another tool's installed files is exactly the kind
 of blast radius design principle 1 (read-only by default) exists to avoid.
+
+## `--vuln-check` only knows what OSV/GHSA have published
+
+`vuln-audit` matches dependency versions found in a skill/plugin's own
+manifest (`go.mod`, `package.json`/`package-lock.json`,
+`requirements.txt`) against OSV.dev's public advisory database. Three
+boundaries that matter:
+
+- **Zero-days aren't in scope.** A vulnerability nobody has published yet
+  cannot be detected by version matching against a public database, by
+  definition. This tells you about *known, disclosed* issues only.
+- **Not SAST/DAST.** There is no analysis of the dependency's actual code
+  - no disassembly, no execution, no data-flow analysis. This is purely
+  "does this exact version appear in a published advisory's affected
+  range," the same technique `npm audit`/`pip-audit`/`govulncheck` use.
+- **Not a pentest substitute.** A clean `vuln-audit` result means "no
+  known CVE matches the exact versions this tool could parse out of your
+  manifests" - it says nothing about custom code, misconfigurations, or
+  anything a professional security review would catch.
+
+Only three ecosystems are parsed in v0.1 (Go, npm, PyPI), and even then
+only exact pinned versions count - a `package.json` range like `^1.2.3`
+or a `requirements.txt` line like `flask>=2.0.0` is skipped rather than
+guessed at (see `exactVersion`/`parseRequirementsTxt` in
+`internal/vulnaudit/manifest.go`), because querying OSV with a guessed
+version would be worse than not checking that package at all. This is
+also the only part of agent-stack-audit that ever makes a network call,
+and it never does so without printing exactly what will be sent and
+waiting for an explicit `y` - every scan, with no flag to silence the
+prompt.

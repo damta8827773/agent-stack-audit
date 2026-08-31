@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package report
 
 import (
@@ -108,5 +110,42 @@ func TestFormatTimestamp(t *testing.T) {
 	}
 	if got := formatTimestamp("not-a-timestamp"); got != "not-a-timestamp" {
 		t.Errorf("formatTimestamp should fall back to the raw string, got %q", got)
+	}
+}
+
+func TestRender_VulnAuditSectionOnlyWhenPresent(t *testing.T) {
+	withoutVuln := Render(sampleReport())
+	if strings.Contains(withoutVuln, "## Vuln Audit") {
+		t.Errorf("expected no Vuln Audit section when --vuln-check didn't run, got:\n%s", withoutVuln)
+	}
+
+	r := sampleReport()
+	r.VulnAudit = []VulnAuditEntry{
+		{
+			ID: "vuln-GHSA-xxxx", VulnerabilityID: "GHSA-xxxx", Ecosystem: "npm",
+			Package: "left-pad", InstalledVersion: "1.3.0", FixedVersion: "1.3.1",
+			Severity: "HIGH", AdvisoryURL: "https://osv.dev/vulnerability/GHSA-xxxx",
+		},
+	}
+	withVuln := Render(r)
+	if !strings.Contains(withVuln, "## Vuln Audit") {
+		t.Errorf("expected a Vuln Audit section, got:\n%s", withVuln)
+	}
+	if !strings.Contains(withVuln, "left-pad") || !strings.Contains(withVuln, "GHSA-xxxx") || !strings.Contains(withVuln, "HIGH") {
+		t.Errorf("Vuln Audit section missing expected content, got:\n%s", withVuln)
+	}
+	if !strings.Contains(withVuln, "OSV.dev") {
+		t.Errorf("expected the source/limitation disclaimer, got:\n%s", withVuln)
+	}
+}
+
+func TestRender_VulnAuditMissingSeverityShowsPlaceholder(t *testing.T) {
+	r := sampleReport()
+	r.VulnAudit = []VulnAuditEntry{
+		{ID: "vuln-OSV-1", VulnerabilityID: "OSV-1", Package: "x", Ecosystem: "Go", InstalledVersion: "1.0.0"},
+	}
+	md := Render(r)
+	if !strings.Contains(md, "tidak dilaporkan OSV/GHSA") {
+		t.Errorf("expected the no-severity placeholder, got:\n%s", md)
 	}
 }

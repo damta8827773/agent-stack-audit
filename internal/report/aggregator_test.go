@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package report
 
 import (
@@ -8,6 +10,7 @@ import (
 	"github.com/damta8827773/agent-stack-audit/internal/memoryaudit"
 	"github.com/damta8827773/agent-stack-audit/internal/tokencost"
 	"github.com/damta8827773/agent-stack-audit/internal/trustreport"
+	"github.com/damta8827773/agent-stack-audit/internal/vulnaudit"
 )
 
 func TestBuild_SummaryCounts(t *testing.T) {
@@ -74,5 +77,33 @@ func TestBuild_EmptyInputProducesZeroedReport(t *testing.T) {
 	r := Build(BuildInput{Host: "linux-arm64"})
 	if r.Summary.TotalSkillsFound != 0 || r.Summary.ConflictsFound != 0 {
 		t.Errorf("expected all-zero summary for empty input, got %+v", r.Summary)
+	}
+}
+
+func TestBuild_VulnAudit(t *testing.T) {
+	in := BuildInput{
+		Host: "linux-amd64",
+		VulnAudit: []vulnaudit.Finding{
+			{
+				ID: "vuln-GHSA-xxxx", Confidence: "CONFIRMED", Ecosystem: "npm",
+				Package: "left-pad", InstalledVersion: "1.3.0", VulnerabilityID: "GHSA-xxxx",
+				Severity: "HIGH", FixedVersion: "1.3.1", SourcePath: "/x/package.json",
+				AdvisoryURL: "https://osv.dev/vulnerability/GHSA-xxxx",
+			},
+		},
+	}
+	r := Build(in)
+	if r.Summary.VulnerabilitiesFound != 1 {
+		t.Errorf("VulnerabilitiesFound = %d, want 1", r.Summary.VulnerabilitiesFound)
+	}
+	if len(r.VulnAudit) != 1 || r.VulnAudit[0].Package != "left-pad" {
+		t.Errorf("unexpected VulnAudit: %+v", r.VulnAudit)
+	}
+}
+
+func TestBuild_NoVulnAuditLeavesFieldEmpty(t *testing.T) {
+	r := Build(BuildInput{Host: "linux-amd64"})
+	if len(r.VulnAudit) != 0 {
+		t.Errorf("expected empty VulnAudit when the check wasn't run, got %+v", r.VulnAudit)
 	}
 }

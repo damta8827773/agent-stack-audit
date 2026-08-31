@@ -46,6 +46,22 @@ JSON itself, regardless of what the binary's own version number does.
   content, see `internal/trustreport`): still LIKELY-only, still pattern
   matching, not a claim of actual malware analysis - see
   [docs/LIMITATIONS.md](LIMITATIONS.md).
+- ~~`vuln-audit` module~~ **shipped early as a preview** (`--vuln-check`).
+  Matches Go/npm/PyPI dependency manifests against OSV.dev - version
+  matching against a public advisory database, not SAST/DAST, not
+  zero-day detection. The only module that ever makes a network call, and
+  it always prompts for consent first, every scan. See `internal/vulnaudit`
+  and [docs/LIMITATIONS.md](LIMITATIONS.md).
+  - **Not yet shipped** (still real v0.2+ scope, larger and riskier to
+    rush): scheduled daily runs via OS-native schedulers (cron/systemd
+    timer/launchd/Task Scheduler - never a hidden background daemon),
+    an append-only hash-chained audit log (`~/.agent-stack-audit/audit-log.jsonl`,
+    pattern adapted from `gstack-egress`), `agent-stack-audit diff` to
+    show only what changed since the last scan, `agent-stack-audit
+    verify-log` to check the log's hash-chain integrity, and log
+    retention/rotation. `Pipfile.lock`, `composer.json`, and
+    `Gemfile.lock` parsing also aren't implemented yet - only Go, npm,
+    and PyPI in this first pass.
 - Revisit whether `graphify-out/` (project-level generated output) belongs
   in the discover scan - deferred out of v0.1 because it's generated
   output, not installed skill config.
@@ -66,6 +82,22 @@ JSON itself, regardless of what the binary's own version number does.
   releases - see [docs/FAQ.md](FAQ.md). `go install` (source build)
   already sidesteps this entirely and stays the primary recommended
   install path either way.
+
+## Repo integrity (Lampiran L) - partially done
+
+Shipped: `.github/CODEOWNERS` (review required on `internal/memoryaudit`
+and `internal/vulnaudit`), `.github/AI_AGENT_NOTICE.md`, `NOTICE`, SPDX
+headers on every `.go` file.
+
+Not yet shipped:
+- Branch protection on `main` - deliberately held off while there's a
+  single maintainer; see [docs/SECURITY_MODEL.md](SECURITY_MODEL.md) §5
+  for why turning it on now would just block every PR on a review nobody
+  else can give. Revisit once there's a second regular contributor.
+- Signed commits (GPG or Sigstore/`gitsign`) requirement - documented
+  intent, not yet enforced.
+- `cosign`-signed release checksums and a CycloneDX SBOM per release -
+  needs real Sigstore/OIDC wiring in `release.yml`, not just docs.
 
 ## Explicitly not planned
 

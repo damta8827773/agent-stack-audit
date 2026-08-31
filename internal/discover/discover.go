@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package discover finds skills, plugins, and hooks registered in known
 // Claude Code config locations and reports what it found - it never
 // modifies anything.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package trustreport checks basic trust indicators on discovered skills,
 // plugins, and hooks. It never blocks anything - purely passive reporting,
 // per FASE 7's explicit design principle: the decision stays with the user.

@@ -1,0 +1,5 @@
+# Changes to these two modules need extra scrutiny: memoryaudit is the one
+# place a bug could leak actual memory content instead of just metadata,
+# and vulnaudit is the one place that ever makes a network call.
+/internal/memoryaudit/ @damta8827773
+/internal/vulnaudit/   @damta8827773

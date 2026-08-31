@@ -30,10 +30,11 @@ self-contained so tests are reproducible on any machine.
 
 - New logic needs a test. `go vet ./...` and `gofmt -l .` must both be
   clean.
-- Changes to `internal/memoryaudit` need two reviewer approvals, not one -
-  it's the module with the hard non-negotiable constraint (never read
-  memory-store content), so a second pair of eyes matters more there than
-  anywhere else in the codebase.
+- Changes to `internal/memoryaudit` or `internal/vulnaudit` need two
+  reviewer approvals, not one (see `.github/CODEOWNERS`) - one has the
+  hard non-negotiable constraint of never reading memory-store content,
+  the other is the only module that ever makes a network call. A second
+  pair of eyes matters more there than anywhere else in the codebase.
 - If you're changing the `report.json` schema, bump `schema_version` and
   say so explicitly in the PR description - see
   [Lampiran I / versioning policy](docs/ROADMAP.md).
