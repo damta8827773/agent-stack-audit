@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -71,7 +72,7 @@ func TestRun_ScanEndToEnd_DetectsRealConfirmedConflict(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"scan", "--destination", dest}, &stdout, &stderr)
+	code := Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
 
 	if code != 1 {
 		t.Fatalf("exit code = %d, want 1 (a CONFIRMED conflict exists); stderr: %s", code, stderr.String())
@@ -103,6 +104,104 @@ func TestRun_ScanEndToEnd_DetectsRealConfirmedConflict(t *testing.T) {
 	}
 }
 
+func TestRun_FixWritesFileOnYesConfirmation(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"scan", "--destination", dest, "--fix"}, strings.NewReader("y\n"), &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1, stderr: %s", code, stderr.String())
+	}
+
+	if !strings.Contains(stdout.String(), "conflict-001") {
+		t.Errorf("expected the suggestion to be printed to stdout, got: %s", stdout.String())
+	}
+
+	fixPath := filepath.Join(dest, "suggested-fixes.md")
+	data, err := os.ReadFile(fixPath)
+	if err != nil {
+		t.Fatalf("suggested-fixes.md not written despite 'y' confirmation: %v", err)
+	}
+	if !strings.Contains(string(data), "conflict-001") {
+		t.Errorf("suggested-fixes.md missing the conflict ID, got: %s", data)
+	}
+	if !strings.Contains(string(data), "bukan perubahan otomatis") {
+		t.Errorf("suggested-fixes.md missing the manual-only disclaimer, got: %s", data)
+	}
+}
+
+func TestRun_FixDoesNotWriteOnNoConfirmation(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"scan", "--destination", dest, "--fix"}, strings.NewReader("n\n"), &stdout, &stderr)
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1, stderr: %s", code, stderr.String())
+	}
+
+	if _, err := os.Stat(filepath.Join(dest, "suggested-fixes.md")); !os.IsNotExist(err) {
+		t.Errorf("suggested-fixes.md should not exist after declining confirmation, err: %v", err)
+	}
+	if !strings.Contains(stdout.String(), "Tidak ditulis") {
+		t.Errorf("expected a 'not written' acknowledgement on stdout, got: %s", stdout.String())
+	}
+}
+
+func TestRun_FixWithoutFlagNeverPrompts(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	// No stdin available at all (empty reader) - if --fix were somehow
+	// triggered without the flag, readLine would just return "", but the
+	// real assertion here is that suggested-fixes.md never appears.
+	var stdout, stderr bytes.Buffer
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
+
+	if _, err := os.Stat(filepath.Join(dest, "suggested-fixes.md")); !os.IsNotExist(err) {
+		t.Errorf("suggested-fixes.md should never be written without --fix, err: %v", err)
+	}
+}
+
+func TestRun_FixWithNoConfirmedConflicts(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("CLAUDE_CONFIG_DIR", root) // empty: discover finds nothing
+	isolateMemoryTargets(t)
+
+	dest := filepath.Join(t.TempDir(), "audit-report")
+	origWD, _ := os.Getwd()
+	t.Chdir(t.TempDir())
+	defer os.Chdir(origWD)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"scan", "--destination", dest, "--fix"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0, stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "tidak ada konflik CONFIRMED") {
+		t.Errorf("expected the no-CONFIRMED-conflicts message, got: %s", stdout.String())
+	}
+}
+
 func TestRun_ScanOnlyDiscoverSkipsOtherModules(t *testing.T) {
 	fixture := buildTwoSystemConflictFixture(t)
 	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
@@ -114,7 +213,7 @@ func TestRun_ScanOnlyDiscoverSkipsOtherModules(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"scan", "--only", "discover", "--destination", dest}, &stdout, &stderr)
+	code := Run([]string{"scan", "--only", "discover", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0 (conflict-check didn't run), stderr: %s", code, stderr.String())
 	}
@@ -145,7 +244,7 @@ func TestRun_ScanFormatJSONOnly(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	Run([]string{"scan", "--format", "json", "--destination", dest}, &stdout, &stderr)
+	Run([]string{"scan", "--format", "json", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
 
 	if _, err := os.Stat(filepath.Join(dest, "report.json")); err != nil {
 		t.Errorf("report.json should exist: %v", err)
@@ -166,7 +265,7 @@ func TestRun_ScanQuietSuppressesStdout(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	Run([]string{"scan", "--quiet", "--destination", dest}, &stdout, &stderr)
+	Run([]string{"scan", "--quiet", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
 
 	if stdout.Len() != 0 {
 		t.Errorf("expected no stdout output with --quiet, got: %s", stdout.String())
@@ -175,7 +274,7 @@ func TestRun_ScanQuietSuppressesStdout(t *testing.T) {
 
 func TestRun_Version(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"version"}, &stdout, &stderr)
+	code := Run([]string{"version"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0", code)
 	}
@@ -186,7 +285,7 @@ func TestRun_Version(t *testing.T) {
 
 func TestRun_NoArgsPrintsUsageAndExits2(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run(nil, &stdout, &stderr)
+	code := Run(nil, strings.NewReader(""), &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2", code)
 	}
@@ -197,7 +296,7 @@ func TestRun_NoArgsPrintsUsageAndExits2(t *testing.T) {
 
 func TestRun_UnknownCommand(t *testing.T) {
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"bogus"}, &stdout, &stderr)
+	code := Run([]string{"bogus"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2", code)
 	}
@@ -213,7 +312,7 @@ func TestRun_InitConfigWritesFileAndRefusesOverwrite(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"init-config"}, &stdout, &stderr)
+	code := Run([]string{"init-config"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0, stderr: %s", code, stderr.String())
 	}
@@ -223,7 +322,7 @@ func TestRun_InitConfigWritesFileAndRefusesOverwrite(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
-	code = Run([]string{"init-config"}, &stdout, &stderr)
+	code = Run([]string{"init-config"}, strings.NewReader(""), &stdout, &stderr)
 	if code != 2 {
 		t.Errorf("expected exit 2 when config already exists, got %d", code)
 	}
@@ -242,7 +341,7 @@ func TestRun_MissingDirectoryIsNotFatal(t *testing.T) {
 	defer os.Chdir(origWD)
 
 	var stdout, stderr bytes.Buffer
-	code := Run([]string{"scan", "--destination", dest}, &stdout, &stderr)
+	code := Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
 	if code != 0 {
 		t.Fatalf("exit code = %d, want 0 for an entirely empty/missing config dir, stderr: %s", code, stderr.String())
 	}

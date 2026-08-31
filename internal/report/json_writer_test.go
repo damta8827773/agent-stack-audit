@@ -24,7 +24,7 @@ func sampleReport() Report {
 				Sources: []string{"claude-mem", "superpowers"}, Detail: "identik persis"},
 		},
 		TokenCost: []TokenCostEntry{
-			{SourceSystem: "gstack", EstimatedTokens: 3200, AlwaysOn: true, EstimationMethod: "char_ratio_approximate"},
+			{SourceSystem: "gstack", EstimatedTokens: 3200, AlwaysOn: true, EstimationMethod: "char_ratio_per_content_type_approximate"},
 		},
 		MemoryAudit: []MemoryAuditEntry{
 			{System: "claude-mem", Path: "~/.claude-mem/claude-mem.db", SizeBytes: 4521984, LastModified: "2026-08-29T22:10:00Z", WorldReadable: false},

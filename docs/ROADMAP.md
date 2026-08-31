@@ -19,17 +19,33 @@ JSON itself, regardless of what the binary's own version number does.
 
 ## v0.2
 
-- `--fix` flag: opt-in, interactive confirmation per change, never silent.
-  Scoped narrowly at first (e.g. suggesting a matcher split for a CONFIRMED
-  hook conflict) rather than attempting broad auto-remediation.
+- ~~`--fix` flag~~ **shipped early as a preview.** Scoped exactly as
+  planned: CONFIRMED conflicts only, prints a suggestion, asks for
+  explicit `y`/`N` confirmation before writing anything, and never touches
+  a plugin/skill's own files - it only ever writes
+  `<destination>/suggested-fixes.md`, its own output file. See
+  `internal/fix`.
+- ~~Per-content-type token divisors~~ **shipped early.** Frontmatter and
+  body now get separate char-ratio divisors (see
+  `internal/tokencost`'s `FrontmatterCharsPerToken` /
+  `BodyCharsPerToken`) instead of one flat number - still hand-picked, not
+  calibrated against real `count_tokens` output, and the
+  `estimation_method` field says so explicitly
+  (`char_ratio_per_content_type_approximate`).
+- ~~Fuzz testing for the YAML/JSON parsers in `discover`~~ **shipped
+  early.** `FuzzParseFrontmatter`, `FuzzExtractHooks`, `FuzzJSONManifest`,
+  `FuzzStripBOM` run as a permanent CI job (15s each per run, not
+  exhaustive, but catches a parser panic regression).
 - `--exact` token counting via the real `count_tokens` API - gated behind
   an explicit egress warning before anything leaves the machine, following
   gstack's egress-receipt pattern as a design reference (not shared code).
-- Per-content-type token divisors (calibrated against `count_tokens`
-  output), replacing or supplementing the flat char-ratio estimate - only
-  if it can be done without overclaiming precision the estimate doesn't
-  have.
-- Fuzz testing for the YAML/JSON parsers in `discover`.
+  Would let the per-content-type divisors above actually be calibrated
+  instead of hand-picked, if built.
+- Additional `trust-report` heuristics beyond what shipped early (base64
+  blob / eval-obfuscation pattern detection in hook commands and script
+  content, see `internal/trustreport`): still LIKELY-only, still pattern
+  matching, not a claim of actual malware analysis - see
+  [docs/LIMITATIONS.md](LIMITATIONS.md).
 - Revisit whether `graphify-out/` (project-level generated output) belongs
   in the discover scan - deferred out of v0.1 because it's generated
   output, not installed skill config.

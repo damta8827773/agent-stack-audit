@@ -52,8 +52,8 @@ func TestRender_EmptySectionsDontCrash(t *testing.T) {
 func TestRender_TokenCostSortedDescending(t *testing.T) {
 	r := sampleReport()
 	r.TokenCost = []TokenCostEntry{
-		{SourceSystem: "small", EstimatedTokens: 50, EstimationMethod: "char_ratio_approximate"},
-		{SourceSystem: "big", EstimatedTokens: 5000, EstimationMethod: "char_ratio_approximate"},
+		{SourceSystem: "small", EstimatedTokens: 50, EstimationMethod: "char_ratio_per_content_type_approximate"},
+		{SourceSystem: "big", EstimatedTokens: 5000, EstimationMethod: "char_ratio_per_content_type_approximate"},
 	}
 	md := Render(r)
 	bigIdx := strings.Index(md, "| big |")

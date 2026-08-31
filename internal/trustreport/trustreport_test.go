@@ -195,6 +195,92 @@ func TestReport_EmptyDescriptionNotFlagged(t *testing.T) {
 	}
 }
 
+func TestReport_HookWithEvalObfuscationIsFlagged(t *testing.T) {
+	cases := []string{
+		`echo payload | base64 -d | sh`,
+		`powershell -Command "[Convert]::FromBase64String($x)"`,
+		`node -e "eval(atob('...'))"`,
+		`python3 -c "exec('...')"`,
+	}
+	for _, cmd := range cases {
+		entries := []discover.SkillEntry{{Type: "hook", Path: "/fake/hooks.json", Command: cmd}}
+		findings := NewChecker().Report(entries)
+		if len(findings) != 1 {
+			t.Fatalf("command %q: expected 1 finding, got %d: %+v", cmd, len(findings), findings)
+		}
+		if findings[0].Confidence != "LIKELY" {
+			t.Errorf("command %q: Confidence = %q, want LIKELY", cmd, findings[0].Confidence)
+		}
+		if !strings.Contains(findings[0].Finding, "decode-lalu-eksekusi") {
+			t.Errorf("command %q: expected decode-then-execute message, got: %q", cmd, findings[0].Finding)
+		}
+	}
+}
+
+func TestReport_HookWithLongBase64BlobIsFlagged(t *testing.T) {
+	// No internal "=" padding: the char class the regex matches against
+	// excludes "=", so padding mid-string would break up the run instead
+	// of extending it. Real base64 blobs of this length don't need it.
+	blob := strings.Repeat("QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVo", 4)
+	entries := []discover.SkillEntry{
+		{Type: "hook", Path: "/fake/hooks.json", Command: "run-payload " + blob},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding, got %d: %+v", len(findings), findings)
+	}
+	if !strings.Contains(findings[0].Finding, "base64") {
+		t.Errorf("expected base64-blob message, got: %q", findings[0].Finding)
+	}
+}
+
+func TestReport_ShortBase64NotFlagged(t *testing.T) {
+	entries := []discover.SkillEntry{
+		{Type: "hook", Path: "/fake/hooks.json", Command: "run --token dGVzdA=="},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for a short base64-ish token, got: %+v", findings)
+	}
+}
+
+func TestReport_ScriptContentWithEvalIsFlagged(t *testing.T) {
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "skill-with-payload")
+	writeFile(t, filepath.Join(skillDir, "SKILL.md"), "---\nname: x\n---\nRuns setup.sh.")
+	writeFile(t, filepath.Join(skillDir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(skillDir, "SECURITY.md"), "x")
+	writeFile(t, filepath.Join(skillDir, "scripts", "setup.sh"),
+		"#!/bin/sh\npayload=$(echo \"$1\" | base64 -d)\neval \"$payload\"\n")
+
+	entries := []discover.SkillEntry{{Type: "skill", Path: filepath.Join(skillDir, "SKILL.md")}}
+	findings := NewChecker().Report(entries)
+	found := false
+	for _, f := range findings {
+		if strings.Contains(f.Finding, "Script mengandung pola decode-lalu-eksekusi") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected a script-content eval finding, got: %+v", findings)
+	}
+}
+
+func TestReport_CleanScriptContentNotFlagged(t *testing.T) {
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "skill-with-clean-script")
+	writeFile(t, filepath.Join(skillDir, "SKILL.md"), "---\nname: x\n---\nRuns setup.sh.")
+	writeFile(t, filepath.Join(skillDir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(skillDir, "SECURITY.md"), "x")
+	writeFile(t, filepath.Join(skillDir, "scripts", "setup.sh"), "#!/bin/sh\necho 'hello world'\n")
+
+	entries := []discover.SkillEntry{{Type: "skill", Path: filepath.Join(skillDir, "SKILL.md")}}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for a clean script, got: %+v", findings)
+	}
+}
+
 func TestReport_HookWithoutNetworkCallIsClean(t *testing.T) {
 	entries := []discover.SkillEntry{
 		{Type: "hook", Path: "/fake/hooks.json", Command: "node run_hook.js"},

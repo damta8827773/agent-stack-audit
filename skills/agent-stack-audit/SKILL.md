@@ -34,7 +34,11 @@ plugin, hook, or memory-store file it discovers.
 ## What NOT to do
 
 Do not edit, delete, or "fix" anything this tool reports without the user
-explicitly asking - it's a read-only auditor by design (no `--fix` flag
-exists before v0.2, and even then it will require per-change confirmation).
-Do not treat `LIKELY` or `INFORMATIONAL` findings as confirmed problems;
-report them with their actual confidence level.
+explicitly asking - it's a read-only auditor by design. `scan --fix` exists
+as a v0.2 preview, but it only ever prints suggestions and, after an
+explicit `y` confirmation, writes them to `<destination>/suggested-fixes.md`
+- it never edits a plugin/skill's own files itself. Applying a suggestion
+is always a manual step the user takes elsewhere; don't do it on their
+behalf without being asked. Do not treat `LIKELY` or `INFORMATIONAL`
+findings as confirmed problems; report them with their actual confidence
+level.

@@ -5,16 +5,19 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 
 	"github.com/damta8827773/agent-stack-audit/internal/config"
 	"github.com/damta8827773/agent-stack-audit/internal/conflict"
 	"github.com/damta8827773/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/fix"
 	"github.com/damta8827773/agent-stack-audit/internal/memoryaudit"
 	"github.com/damta8827773/agent-stack-audit/internal/report"
 	"github.com/damta8827773/agent-stack-audit/internal/tokencost"
@@ -24,12 +27,13 @@ import (
 )
 
 func main() {
-	os.Exit(Run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(Run(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
-// Run is the whole CLI, parameterized on args/stdout/stderr so it can be
-// exercised directly from tests without touching the real process streams.
-func Run(args []string, stdout, stderr io.Writer) int {
+// Run is the whole CLI, parameterized on args/stdin/stdout/stderr so it can
+// be exercised directly from tests without touching the real process
+// streams (stdin matters for --fix's interactive confirmation prompt).
+func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
 		printUsage(stdout)
 		return 2
@@ -37,7 +41,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 
 	switch args[0] {
 	case "scan":
-		return runScan(args[1:], stdout, stderr)
+		return runScan(args[1:], stdin, stdout, stderr)
 	case "init-config":
 		return runInitConfig(args[1:], stdout, stderr)
 	case "version":
@@ -69,6 +73,9 @@ Scan flags:
   --verbose             log every skipped/errored path
   --config <path>       path to .agent-stack-audit.yml (default: .agent-stack-audit.yml)
   --destination <path>  output directory (default: audit-report)
+  --fix                 after scanning, suggest manual fixes for CONFIRMED conflicts and
+                         offer to write them to <destination>/suggested-fixes.md (asks for
+                         confirmation first; never edits any plugin/skill file itself)
 
 Exit codes:
   0  scan succeeded, no CONFIRMED findings
@@ -108,7 +115,7 @@ thresholds:
 	return 0
 }
 
-func runScan(args []string, stdout, stderr io.Writer) int {
+func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	fs := flag.NewFlagSet("scan", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	only := fs.String("only", "", "comma-separated modules to run")
@@ -120,6 +127,7 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 	verbose := fs.Bool("verbose", false, "log every skipped/errored path")
 	configPath := fs.String("config", config.DefaultConfigFile, "path to .agent-stack-audit.yml")
 	destination := fs.String("destination", "", "output directory")
+	fixFlag := fs.Bool("fix", false, "suggest manual fixes for CONFIRMED conflicts (never edits plugin/skill files)")
 
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -216,6 +224,13 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, tui.Render(r))
 	}
 
+	if *fixFlag {
+		if err := runFix(conflicts, dest, stdin, stdout); err != nil {
+			fmt.Fprintf(stderr, "error writing suggested-fixes.md: %v\n", err)
+			return 2
+		}
+	}
+
 	if hasConfirmed(r) {
 		return 1
 	}
@@ -234,6 +249,54 @@ func resolveModules(only string) map[string]bool {
 		enabled[strings.TrimSpace(m)] = true
 	}
 	return enabled
+}
+
+// runFix prints a manual-fix suggestion for every CONFIRMED conflict, then
+// asks for explicit confirmation before writing them to a file - it never
+// writes anything without a "y" answer, and never touches any file outside
+// dest (see internal/fix's own doc comment: it doesn't even know where a
+// plugin's real config file lives).
+func runFix(conflicts []conflict.Conflict, dest string, stdin io.Reader, stdout io.Writer) error {
+	suggestions := fix.Suggest(conflicts)
+	if len(suggestions) == 0 {
+		fmt.Fprintln(stdout, "\n--fix: tidak ada konflik CONFIRMED, tidak ada saran untuk ditulis.")
+		return nil
+	}
+
+	fmt.Fprintln(stdout, "\n--fix: saran untuk konflik CONFIRMED (manual, tidak ada file plugin lain yang diubah):")
+	for _, s := range suggestions {
+		fmt.Fprintf(stdout, "\n%s\n%s", s.ConflictID, s.Text)
+	}
+
+	fixPath := filepath.Join(dest, "suggested-fixes.md")
+	fmt.Fprintf(stdout, "\nTulis saran ini ke %s? [y/N]: ", fixPath)
+	answer := readLine(stdin)
+	if !isYes(answer) {
+		fmt.Fprintln(stdout, "Tidak ditulis.")
+		return nil
+	}
+
+	if err := os.MkdirAll(dest, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(fixPath, []byte(fix.RenderMarkdown(suggestions)), 0o644); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "Ditulis ke %s\n", fixPath)
+	return nil
+}
+
+func readLine(r io.Reader) string {
+	scanner := bufio.NewScanner(r)
+	if !scanner.Scan() {
+		return ""
+	}
+	return scanner.Text()
+}
+
+func isYes(answer string) bool {
+	a := strings.ToLower(strings.TrimSpace(answer))
+	return a == "y" || a == "yes"
 }
 
 func hasConfirmed(r report.Report) bool {

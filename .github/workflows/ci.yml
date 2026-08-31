@@ -67,6 +67,25 @@ jobs:
           grep -q '^name:' "$f" || { echo "$f frontmatter missing 'name'"; exit 1; }
           grep -q '^description:' "$f" || { echo "$f frontmatter missing 'description'"; exit 1; }
 
+  fuzz:
+    # Short, permanent fuzz runs for discover's YAML/JSON parsers (docs/
+    # ROADMAP.md v0.2 item) - not exhaustive, but enough to keep catching a
+    # regression that makes one of these panic on malformed input, which is
+    # expected real-world input per FASE 3 (a corrupt config file is a
+    # warning, never fatal).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+      - name: Fuzz discover parsers
+        run: |
+          set -e
+          for fn in FuzzParseFrontmatter FuzzExtractHooks FuzzJSONManifest FuzzStripBOM; do
+            go test ./internal/discover/... -run=^$ -fuzz=^${fn}$ -fuzztime=15s
+          done
+
   no-em-dash:
     # Permanent guard, not a one-time cleanup: fails the build if an em dash
     # (—, U+2014) creeps back into any tracked .go or .md file.

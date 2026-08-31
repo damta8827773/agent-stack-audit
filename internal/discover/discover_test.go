@@ -1,6 +1,7 @@
 package discover
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -435,4 +436,77 @@ func TestFilterExcluded_NoExcludesReturnsAllUnchanged(t *testing.T) {
 	if len(filtered) != 2 {
 		t.Fatalf("expected all entries preserved, got %d", len(filtered))
 	}
+}
+
+// Fuzz targets for discover's YAML/JSON parsers (docs/ROADMAP.md v0.2 item).
+// A malformed SKILL.md/plugin.json/hooks.json is expected input on a real
+// machine (FASE 3's own "skenario gagal" table: malformed files are a
+// warning, never fatal) - these guard the parsing functions against ever
+// panicking on adversarial or simply corrupt input, seeded with the real
+// shapes exercised elsewhere in this file.
+
+func FuzzParseFrontmatter(f *testing.F) {
+	seeds := []string{
+		"---\nname: test\ndescription: hello\n---\nbody",
+		"",
+		"---",
+		"---\n",
+		"---\nname: [unclosed\n---\nbody",
+		"no frontmatter at all",
+		"---\n---\n",
+		"---\nname: test\n",
+	}
+	for _, s := range seeds {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		// Must never panic, regardless of input.
+		_, _, _ = parseFrontmatter(data)
+	})
+}
+
+func FuzzExtractHooks(f *testing.F) {
+	seeds := []string{
+		`{"hooks":{"PostToolUse":[{"matcher":"*","hooks":[{"type":"command","command":"x"}]}]}}`,
+		`{"SessionStart":[{"matcher":"startup","hooks":[{"type":"command","command":"y"}]}]}`,
+		`{}`,
+		``,
+		`not json`,
+		`{"hooks": null}`,
+		`{"hooks": {"X": null}}`,
+		`[]`,
+	}
+	for _, s := range seeds {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		_, _ = extractHooks(data)
+	})
+}
+
+func FuzzJSONManifest(f *testing.F) {
+	seeds := []string{
+		`{"name": "claude-mem"}`,
+		`{}`,
+		`{"name": ""}`,
+		`not json`,
+		`{"name": 123}`,
+	}
+	for _, s := range seeds {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		var m jsonManifest
+		_ = json.Unmarshal(stripBOM(data), &m)
+	})
+}
+
+func FuzzStripBOM(f *testing.F) {
+	f.Add([]byte{0xEF, 0xBB, 0xBF, 'x'})
+	f.Add([]byte{})
+	f.Add([]byte{0xEF})
+	f.Add([]byte{0xEF, 0xBB})
+	f.Fuzz(func(t *testing.T, data []byte) {
+		_ = stripBOM(data)
+	})
 }

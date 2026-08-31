@@ -62,11 +62,11 @@ func Render(r Report) string {
 			fmt.Fprintf(&b, "| %s | %s | %s |\n", tc.SourceSystem, formatThousands(tc.EstimatedTokens), yaTidak(tc.AlwaysOn))
 		}
 		b.WriteString("\n")
-		method := "char_ratio_approximate"
+		method := "char_ratio_per_content_type_approximate"
 		if len(r.TokenCost) > 0 {
 			method = r.TokenCost[0].EstimationMethod
 		}
-		fmt.Fprintf(&b, "Metode estimasi: %s (~4 karakter/token). Ini APROKSIMASI,\nbukan angka tokenizer resmi.\n\n", method)
+		fmt.Fprintf(&b, "Metode estimasi: %s (~3.7 karakter/token untuk\nfrontmatter, ~4.0 untuk body). Ini APROKSIMASI, bukan angka tokenizer resmi.\n\n", method)
 	}
 
 	b.WriteString("## Audit Memori\n\n")

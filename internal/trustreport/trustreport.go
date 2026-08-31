@@ -44,6 +44,22 @@ var scriptExtensions = []string{".sh", ".py", ".js", ".rb", ".ps1"}
 var ipv4URLPattern = regexp.MustCompile(`https?://(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?::[0-9]+)?(?:[/\s"']|$)`)
 var ipv6URLPattern = regexp.MustCompile(`https?://\[[0-9a-fA-F:]+\](?::[0-9]+)?`)
 
+// base64BlobPattern matches a long run of base64-alphabet characters (80+,
+// no whitespace). The length threshold is deliberately high: short base64
+// (a hash fragment, a small config token) is common and harmless. A blob
+// this long embedded directly in a hook command or script is a real signal
+// worth a manual look - encoded payloads are a common way to smuggle a
+// second-stage script past a casual read of the source - but plenty of
+// legitimate things are long base64 too (an embedded font, a small binary
+// asset, a JWT-like token), so this stays LIKELY, never CONFIRMED.
+var base64BlobPattern = regexp.MustCompile(`[A-Za-z0-9+/]{80,}={0,2}`)
+
+// evalObfuscationPattern matches common "decode and execute" idioms across
+// shells/languages: piping through a base64 decoder into a shell, or
+// calling eval/exec on a string built at runtime. Like base64BlobPattern,
+// this flags a pattern, not a verdict - eval() has legitimate uses too.
+var evalObfuscationPattern = regexp.MustCompile(`(?i)\bbase64\s+(-d|--decode)\b|\bFromBase64String\b|\batob\s*\(|\beval\s*\(|\bexec\s*\(\s*['"]`)
+
 // genericMarketingPhrases mirrors Lampiran C's forbidden-word list for this
 // project's own docs (words barred without a concrete number backing them
 // up), plus a couple of well-known AI-generated-copy clichés. A skill
@@ -106,6 +122,16 @@ func checkDir(dir, description string, n *int) []Finding {
 }
 
 func checkHookCommand(e discover.SkillEntry, n *int) (Finding, bool) {
+	if evalObfuscationPattern.MatchString(e.Command) {
+		return newFinding(n, "LIKELY",
+			fmt.Sprintf("Command hook (%s, event %s) mengandung pola decode-lalu-eksekusi (base64 decode / eval / exec) - bisa jadi cara menyembunyikan payload dari pembacaan langsung, butuh review manual", e.SourceSystem, e.Event),
+			e.Path), true
+	}
+	if base64BlobPattern.MatchString(e.Command) {
+		return newFinding(n, "LIKELY",
+			fmt.Sprintf("Command hook (%s, event %s) mengandung string panjang mirip base64 - bisa jadi payload ter-encode, butuh review manual (bisa juga sesuatu yang jinak seperti token/asset)", e.SourceSystem, e.Event),
+			e.Path), true
+	}
 	if ipv4URLPattern.MatchString(e.Command) || ipv6URLPattern.MatchString(e.Command) {
 		return newFinding(n, "LIKELY",
 			fmt.Sprintf("Command hook (%s, event %s) memanggil alamat IP mentah, bukan nama domain - pola ini lebih umum dipakai untuk bypass DNS/reputation check ketimbang panggilan API biasa, butuh review manual", e.SourceSystem, e.Event),
@@ -156,13 +182,51 @@ func checkExecutableScripts(dir string, n *int) []Finding {
 			if item.IsDir() || !looksExecutable(item) {
 				continue
 			}
-			if strings.Contains(docText, item.Name()) {
-				continue
+			scriptPath := filepath.Join(subdir, item.Name())
+
+			if !strings.Contains(docText, item.Name()) {
+				findings = append(findings, newFinding(n, "LIKELY",
+					fmt.Sprintf("Skill memuat script executable (%s) tapi tidak ada dokumentasi apa fungsinya", item.Name()),
+					scriptPath))
 			}
-			findings = append(findings, newFinding(n, "LIKELY",
-				fmt.Sprintf("Skill memuat script executable (%s) tapi tidak ada dokumentasi apa fungsinya", item.Name()),
-				filepath.Join(subdir, item.Name())))
+
+			findings = append(findings, checkScriptContent(scriptPath, n)...)
 		}
+	}
+	return findings
+}
+
+// maxScriptContentScan caps how much of a script this reads for the
+// eval/base64-obfuscation check - large enough for any real shell/python
+// script, small enough to never meaningfully slow a scan down on an
+// accidentally-huge file.
+const maxScriptContentScan = 1 << 20 // 1 MiB
+
+// checkScriptContent scans a script's own source (not just its filename)
+// for the same decode-then-execute and base64-blob patterns checked in
+// hook commands. Same LIKELY-only confidence and same caveat: this is a
+// pattern match, not proof of anything malicious.
+func checkScriptContent(path string, n *int) []Finding {
+	info, err := os.Stat(path)
+	if err != nil || info.Size() > maxScriptContentScan {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	content := string(data)
+
+	var findings []Finding
+	if evalObfuscationPattern.MatchString(content) {
+		findings = append(findings, newFinding(n, "LIKELY",
+			"Script mengandung pola decode-lalu-eksekusi (base64 decode / eval / exec) - bisa jadi cara menyembunyikan payload dari pembacaan langsung, butuh review manual",
+			path))
+	}
+	if base64BlobPattern.MatchString(content) {
+		findings = append(findings, newFinding(n, "LIKELY",
+			"Script mengandung string panjang mirip base64 - bisa jadi payload ter-encode, butuh review manual (bisa juga sesuatu yang jinak seperti asset/token)",
+			path))
 	}
 	return findings
 }

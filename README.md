@@ -52,7 +52,7 @@ them (auto-detected - degrades to plain text otherwise, as shown here).
 | `conflict-check` | Flags hooks from different sources registered on the same event with an overlapping matcher |
 | `token-cost` | Estimates context-window overhead from always-on skill instructions |
 | `memory-audit` | Reports metadata (path, size, last-write time, permission) for known local memory stores - never their content |
-| `trust-report` | Flags missing LICENSE/SECURITY.md, world-writable skill dirs, hooks calling external URLs or raw IP addresses, undocumented executable scripts, generic/buzzword-heavy skill descriptions |
+| `trust-report` | Flags missing LICENSE/SECURITY.md, world-writable skill dirs, hooks calling external URLs or raw IP addresses, undocumented executable scripts, generic/buzzword-heavy skill descriptions, base64-blob/eval-obfuscation patterns in hook commands and script content |
 
 A real `conflict-check` finding, reproducing an actual conflict found during
 this project's own research (claude-mem and superpowers both register
@@ -68,6 +68,17 @@ Every finding carries a confidence level - `CONFIRMED`, `LIKELY`, or
 | `CONFIRMED` | Exact match (identical matcher, world-writable permission bit) |
 | `LIKELY` | Heuristic with real false-positive risk (partial matcher overlap, a hook calling an external domain) |
 | `INFORMATIONAL` | Not a risk, just context (no LICENSE file, multiple hooks on the same event with no overlap) |
+
+### Suggested fixes (`--fix`)
+
+```
+agent-stack-audit scan --fix
+```
+
+For every CONFIRMED conflict, prints a manual suggestion and - only after
+you type `y` at the prompt - writes them all to
+`<destination>/suggested-fixes.md`. It never edits a plugin/skill's own
+files; applying a suggestion is always something you do yourself.
 
 ## What this does NOT do
 
@@ -88,16 +99,20 @@ complete list of every possible conflict.
 
 ### token-cost is a rough approximation
 
-Token counts use a flat ~4 characters/token ratio
-(`estimation_method: "char_ratio_approximate"` in every `token_cost` entry),
-not the real tokenizer. Actual token counts vary by content - code,
-non-English text, and heavy markdown formatting all shift the real ratio.
-gstack's own `gstack-context-bill` calibrates per-content-type divisors
-against real `count_tokens` measurements; agent-stack-audit v0.1 doesn't, by
-choice - a single documented approximation is more honest than an
-uncalibrated attempt at precision. An `--exact` flag that calls the real
-`count_tokens` API is on the roadmap, gated behind an explicit egress
-warning since it sends file text off the machine.
+Token counts use hand-picked character-to-token ratios
+(`estimation_method: "char_ratio_per_content_type_approximate"` in every
+`token_cost` entry) - a YAML frontmatter block is counted at
+~3.7 chars/token, the body at ~4.0 chars/token (the well-known rough
+English-text approximation), not the real tokenizer. Actual token counts
+vary by content - code, non-English text, and heavy markdown formatting all
+shift the real ratio well beyond what either number captures. gstack's own
+`gstack-context-bill` calibrates its per-content-type divisors against real
+`count_tokens` measurements; agent-stack-audit's two ratios are not
+calibrated against anything - they're a reasonable guess at the direction
+and rough size of the frontmatter/body difference, not a precision claim.
+An `--exact` flag that calls the real `count_tokens` API is on the roadmap,
+gated behind an explicit egress warning since it sends file text off the
+machine.
 
 ### World-writable / world-readable checks don't work on Windows
 
@@ -180,6 +195,30 @@ bypassing DNS is a pattern more associated with C2/exfiltration endpoints.
 It is still `LIKELY`, not `CONFIRMED` - plenty of legitimate local tooling
 calls `http://127.0.0.1:PORT` or a LAN device's IP directly. Review the
 actual command before treating this as a real finding.
+
+### base64-blob and eval-obfuscation checks are pattern matching, not malware analysis
+
+`trust-report` flags a hook command or script whose content contains a long
+(80+ character) base64-looking string, or a "decode-then-execute" idiom
+(`base64 -d`, `eval(`, `exec('...')`, `atob(`, `FromBase64String`). This is
+string pattern matching on the source text - there is no disassembly,
+sandboxing, or behavioral analysis anywhere in this tool, and there never
+will be without a fundamentally different (and much larger) engineering
+effort. Both checks are LIKELY, never CONFIRMED: a long base64 string can
+be a legitimate embedded asset or token, and `eval()` has real, benign
+uses. Treat a finding here as "worth opening the file and reading it,"
+never as a verdict.
+
+### `--fix` only ever writes its own output file
+
+`scan --fix` prints a manual suggestion for every CONFIRMED conflict and,
+only after an explicit `y` confirmation, writes them to
+`<destination>/suggested-fixes.md`. It never opens, edits, or even knows
+the on-disk location of the plugin/skill files a suggestion refers to -
+applying a suggestion is always something you do yourself, in whatever
+tool actually owns that config. This isn't a scope agent-stack-audit plans
+to grow into: modifying another tool's installed files is exactly the kind
+of blast radius design principle 1 (read-only by default) exists to avoid.
 
 ## Comparison
 

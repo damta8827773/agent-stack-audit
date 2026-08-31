@@ -43,8 +43,8 @@ func TestEstimate_AggregatesPerSource(t *testing.T) {
 		t.Errorf("unexpected gstack entry: %+v", result[1])
 	}
 	for _, e := range result {
-		if e.EstimationMethod != "char_ratio_approximate" {
-			t.Errorf("EstimationMethod = %q, want char_ratio_approximate", e.EstimationMethod)
+		if e.EstimationMethod != "char_ratio_per_content_type_approximate" {
+			t.Errorf("EstimationMethod = %q, want char_ratio_per_content_type_approximate", e.EstimationMethod)
 		}
 		if !e.AlwaysOn {
 			t.Errorf("AlwaysOn should be true for %s", e.SourceSystem)
@@ -90,6 +90,58 @@ func TestEstimate_UnreadableFileSkippedNotFatal(t *testing.T) {
 	result := NewCharRatioEstimator().Estimate(entries)
 	if len(result) != 0 {
 		t.Fatalf("expected 0 entries for unreadable file, got %+v", result)
+	}
+}
+
+func TestEstimate_FrontmatterAndBodyUseDifferentRatios(t *testing.T) {
+	dir := t.TempDir()
+	fm := "name: x\ndescription: 0123456789012345\n"
+	body := "0123456789012345678901234567890123456789"
+	content := "---\n" + fm + "---\n" + body
+	path := filepath.Join(dir, "skill.md")
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	entries := []discover.SkillEntry{{SourceSystem: "ecc", Type: "skill", AlwaysOn: true, Path: path}}
+	result := NewCharRatioEstimator().Estimate(entries)
+	if len(result) != 1 {
+		t.Fatalf("expected 1 entry, got %+v", result)
+	}
+
+	want := int(float64(len(fm))/FrontmatterCharsPerToken + float64(len(body))/BodyCharsPerToken)
+	if result[0].EstimatedTokens != want {
+		t.Errorf("EstimatedTokens = %d, want %d (frontmatter/body split applied)", result[0].EstimatedTokens, want)
+	}
+}
+
+func TestSplitFrontmatterBody(t *testing.T) {
+	fm, body := splitFrontmatterBody([]byte("---\nname: x\n---\nbody text"))
+	if string(fm) != "\nname: x" {
+		t.Errorf("frontmatter = %q, want %q", fm, "\nname: x")
+	}
+	if string(body) != "\nbody text" {
+		t.Errorf("body = %q, want %q", body, "\nbody text")
+	}
+}
+
+func TestSplitFrontmatterBody_NoFrontmatterReturnsAllBody(t *testing.T) {
+	fm, body := splitFrontmatterBody([]byte("just plain content, no frontmatter"))
+	if fm != nil {
+		t.Errorf("frontmatter = %q, want nil", fm)
+	}
+	if string(body) != "just plain content, no frontmatter" {
+		t.Errorf("body = %q, want full content", body)
+	}
+}
+
+func TestSplitFrontmatterBody_UnclosedDelimiterReturnsAllBody(t *testing.T) {
+	fm, body := splitFrontmatterBody([]byte("---\nname: x\nno closing delimiter"))
+	if fm != nil {
+		t.Errorf("frontmatter = %q, want nil for unclosed delimiter", fm)
+	}
+	if string(body) != "---\nname: x\nno closing delimiter" {
+		t.Errorf("body = %q, want full content treated as body", body)
 	}
 }
 
