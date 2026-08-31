@@ -3,7 +3,7 @@ package conflict
 import (
 	"testing"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/discover"
 )
 
 func hook(source, event, matcher string) discover.SkillEntry {

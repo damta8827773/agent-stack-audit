@@ -21,7 +21,7 @@ plugin, hook, or memory-store file it discovers.
 
 1. Check the binary is available: `agent-stack-audit version`. If not
    found, build it from this repo with `go build ./cmd/agent-stack-audit`
-   or `go install github.com/damtafaiz/agent-stack-audit/cmd/agent-stack-audit@latest`.
+   or `go install github.com/damta8827773/agent-stack-audit/cmd/agent-stack-audit@latest`.
 2. Run `agent-stack-audit scan`. This writes `report.md` and `report.json`
    to `./audit-report/` and prints a terminal summary.
 3. Read `audit-report/report.md` back and summarize the findings for the

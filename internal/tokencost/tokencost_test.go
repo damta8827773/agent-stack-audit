@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/discover"
 )
 
 func writeSkill(t *testing.T, dir, name string, size int) string {

@@ -3,9 +3,9 @@
 CLI read-only yang mengaudit skill, plugin, dan hook Claude Code - dan
 mendeteksi konflik sebelum kamu sadar sendiri.
 
-[![CI](https://github.com/damtafaiz/agent-stack-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/damtafaiz/agent-stack-audit/actions/workflows/ci.yml)
+[![CI](https://github.com/damta8827773/agent-stack-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/damta8827773/agent-stack-audit/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Go Version](https://img.shields.io/github/go-mod/go-version/damtafaiz/agent-stack-audit)
+![Go Version](https://img.shields.io/github/go-mod/go-version/damta8827773/agent-stack-audit)
 
 ## The problem
 
@@ -32,7 +32,7 @@ Peringatan trust: 8
 ## Quick start
 
 ```
-go install github.com/damtafaiz/agent-stack-audit/cmd/agent-stack-audit@latest
+go install github.com/damta8827773/agent-stack-audit/cmd/agent-stack-audit@latest
 agent-stack-audit scan
 ```
 

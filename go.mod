@@ -1,4 +1,4 @@
-module github.com/damtafaiz/agent-stack-audit
+module github.com/damta8827773/agent-stack-audit
 
 go 1.25.1
 

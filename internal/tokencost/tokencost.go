@@ -9,7 +9,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/discover"
 )
 
 // CharsPerToken is the rough English-text ratio FASE 5 specifies

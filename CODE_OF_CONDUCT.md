@@ -7,4 +7,4 @@ In short: be respectful, assume good faith, and keep disagreements about
 code and design rather than people. Harassment, personal attacks, and
 discriminatory language aren't tolerated.
 
-Report violations to damtafaiz@gmail.com. Reports are handled privately.
+Report violations to damta8827773@gmail.com. Reports are handled privately.

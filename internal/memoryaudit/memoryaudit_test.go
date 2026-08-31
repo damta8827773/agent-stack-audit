@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/config"
+	"github.com/damta8827773/agent-stack-audit/internal/config"
 )
 
 func TestAudit_MissingTargetIsSkipped(t *testing.T) {

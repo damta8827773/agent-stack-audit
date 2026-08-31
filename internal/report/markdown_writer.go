@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/version"
+	"github.com/damta8827773/agent-stack-audit/internal/version"
 )
 
 type MarkdownWriter struct{}

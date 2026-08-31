@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/discover"
 )
 
 type Conflict struct {

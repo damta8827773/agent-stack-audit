@@ -16,7 +16,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/config"
+	"github.com/damta8827773/agent-stack-audit/internal/config"
 )
 
 // TableInfo is schema-only: a table's name and row count, never its rows.

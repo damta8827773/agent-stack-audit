@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/report"
+	"github.com/damta8827773/agent-stack-audit/internal/report"
 )
 
 func TestRender_ContainsSummaryNumbers(t *testing.T) {

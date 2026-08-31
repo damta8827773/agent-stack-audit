@@ -12,15 +12,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/config"
-	"github.com/damtafaiz/agent-stack-audit/internal/conflict"
-	"github.com/damtafaiz/agent-stack-audit/internal/discover"
-	"github.com/damtafaiz/agent-stack-audit/internal/memoryaudit"
-	"github.com/damtafaiz/agent-stack-audit/internal/report"
-	"github.com/damtafaiz/agent-stack-audit/internal/tokencost"
-	"github.com/damtafaiz/agent-stack-audit/internal/trustreport"
-	"github.com/damtafaiz/agent-stack-audit/internal/tui"
-	"github.com/damtafaiz/agent-stack-audit/internal/version"
+	"github.com/damta8827773/agent-stack-audit/internal/config"
+	"github.com/damta8827773/agent-stack-audit/internal/conflict"
+	"github.com/damta8827773/agent-stack-audit/internal/discover"
+	"github.com/damta8827773/agent-stack-audit/internal/memoryaudit"
+	"github.com/damta8827773/agent-stack-audit/internal/report"
+	"github.com/damta8827773/agent-stack-audit/internal/tokencost"
+	"github.com/damta8827773/agent-stack-audit/internal/trustreport"
+	"github.com/damta8827773/agent-stack-audit/internal/tui"
+	"github.com/damta8827773/agent-stack-audit/internal/version"
 )
 
 func main() {

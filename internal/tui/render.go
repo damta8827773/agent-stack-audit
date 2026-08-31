@@ -11,7 +11,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
-	"github.com/damtafaiz/agent-stack-audit/internal/report"
+	"github.com/damta8827773/agent-stack-audit/internal/report"
 )
 
 var (

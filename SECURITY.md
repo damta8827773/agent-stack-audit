@@ -10,9 +10,9 @@ that's a security bug, not a feature request.
 
 Please report security issues privately rather than opening a public issue:
 
-- Open a [GitHub Security Advisory](https://github.com/damtafaiz/agent-stack-audit/security/advisories/new)
+- Open a [GitHub Security Advisory](https://github.com/damta8827773/agent-stack-audit/security/advisories/new)
   on this repo, or
-- Email damtafaiz@gmail.com with a description and, if possible, steps to
+- Email damta8827773@gmail.com with a description and, if possible, steps to
   reproduce.
 
 We aim to acknowledge reports within 48 hours and to have a fix or a
