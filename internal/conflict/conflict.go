@@ -1,7 +1,7 @@
 // Package conflict detects hooks from different source systems registered
 // on overlapping event+matcher combinations. This is pattern matching on
 // matcher strings, not static analysis of what the hook commands actually
-// do — see FASE 4's explicit limitation: it cannot guarantee catching every
+// do - see FASE 4's explicit limitation: it cannot guarantee catching every
 // race condition, only overlapping registrations.
 package conflict
 
@@ -98,7 +98,7 @@ func detailFor(confidence, event string, a, b discover.SkillEntry) string {
 			event, a.Matcher, a.SourceSystem, b.Matcher, b.SourceSystem)
 	default:
 		return fmt.Sprintf(
-			"Dua hook dari sumber berbeda (%s, %s) aktif pada event %s yang sama, tapi matcher-nya tidak overlap (%q vs %q) — informasi konteks saja.",
+			"Dua hook dari sumber berbeda (%s, %s) aktif pada event %s yang sama, tapi matcher-nya tidak overlap (%q vs %q) - informasi konteks saja.",
 			a.SourceSystem, b.SourceSystem, event, a.Matcher, b.Matcher)
 	}
 }

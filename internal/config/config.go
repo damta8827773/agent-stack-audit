@@ -32,7 +32,7 @@ type Thresholds struct {
 
 const DefaultConfigFile = ".agent-stack-audit.yml"
 
-// Load reads the optional config file. A missing file is not an error — the
+// Load reads the optional config file. A missing file is not an error - the
 // config file is opt-in per FASE 3 spec ("kalau ada").
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)

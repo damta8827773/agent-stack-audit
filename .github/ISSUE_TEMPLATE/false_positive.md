@@ -6,7 +6,7 @@ labels: false-positive
 ---
 
 conflict-check and trust-report are heuristics (pattern matching, not full
-static analysis — see docs/LIMITATIONS.md), so false positives are expected
+static analysis - see docs/LIMITATIONS.md), so false positives are expected
 and genuinely useful to track. Please include:
 
 **Finding ID**

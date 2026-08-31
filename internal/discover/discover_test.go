@@ -233,7 +233,7 @@ func TestScan_MaxDepthReachesMarketplaceNestedManifest(t *testing.T) {
 func TestScan_BeyondMaxDepthIsNotFound(t *testing.T) {
 	root := t.TempDir()
 	skillsDir := filepath.Join(root, "skills")
-	// 5 directories deep — beyond the max depth budget.
+	// 5 directories deep - beyond the max depth budget.
 	writeFile(t, filepath.Join(skillsDir, "a", "b", "c", "d", "e", "SKILL.md"), "---\nname: too-deep\n---\n")
 
 	entries, _ := NewFSScanner().Scan([]string{skillsDir})
@@ -319,7 +319,7 @@ func TestScan_UTF8BOMDoesNotBreakParsing(t *testing.T) {
 // TestScan_UTF8BOMDoesNotBreakHookSourceInference reproduces a second
 // instance of the same BOM bug: inferHookSource reads a sibling
 // .claude-plugin/plugin.json through its own os.ReadFile+json.Unmarshal
-// call, separate from parseManifestJSON's — fixing stripBOM in one place
+// call, separate from parseManifestJSON's - fixing stripBOM in one place
 // and not the other left this path silently falling back to the vendor
 // directory name instead of the real plugin name.
 func TestScan_UTF8BOMDoesNotBreakHookSourceInference(t *testing.T) {

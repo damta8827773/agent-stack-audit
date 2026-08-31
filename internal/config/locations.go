@@ -7,7 +7,7 @@ import (
 
 // ClaudeConfigDir returns the base Claude Code config directory, honoring
 // the CLAUDE_CONFIG_DIR environment variable (default: ~/.claude). Found
-// during FASE 0 research (watermarks-remover honors this override) — a
+// during FASE 0 research (watermarks-remover honors this override) - a
 // hardcoded ~/.claude would miss any machine that customizes it.
 func ClaudeConfigDir() string {
 	if v := os.Getenv("CLAUDE_CONFIG_DIR"); v != "" {

@@ -23,13 +23,13 @@ var (
 )
 
 // Render produces the interactive-summary text shown by `scan --tui`
-// (FASE 8). It is a static styled render, not a bubbletea event loop —
+// (FASE 8). It is a static styled render, not a bubbletea event loop -
 // FASE 1 lists bubbletea as optional, and a summary block has no
 // interaction to model.
 func Render(r report.Report) string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("agent-stack-audit — Ringkasan Scan"))
+	b.WriteString(titleStyle.Render("agent-stack-audit - Ringkasan Scan"))
 	b.WriteString("\n\n")
 
 	fmt.Fprintf(&b, "%s %d\n", labelStyle.Render("Total skill ditemukan:"), r.Summary.TotalSkillsFound)
@@ -43,7 +43,7 @@ func Render(r report.Report) string {
 		b.WriteString("\n" + titleStyle.Render("Konflik Hook") + "\n")
 		for _, c := range r.Conflicts {
 			b.WriteString(confidenceStyle(c.Confidence).Render(
-				fmt.Sprintf("[%s] %s — %s (%s)", c.Confidence, c.ID, c.Event, strings.Join(c.Sources, " vs "))))
+				fmt.Sprintf("[%s] %s - %s (%s)", c.Confidence, c.ID, c.Event, strings.Join(c.Sources, " vs "))))
 			b.WriteString("\n")
 		}
 	}
@@ -51,7 +51,7 @@ func Render(r report.Report) string {
 	if len(r.TrustReport) > 0 {
 		b.WriteString("\n" + titleStyle.Render("Trust Report") + "\n")
 		for _, t := range r.TrustReport {
-			b.WriteString(confidenceStyle(t.Confidence).Render(fmt.Sprintf("[%s] %s — %s", t.Confidence, t.ID, t.Finding)))
+			b.WriteString(confidenceStyle(t.Confidence).Render(fmt.Sprintf("[%s] %s - %s", t.Confidence, t.ID, t.Finding)))
 			b.WriteString("\n")
 		}
 	}

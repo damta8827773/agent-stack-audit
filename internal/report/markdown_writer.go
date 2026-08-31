@@ -27,7 +27,7 @@ func (w *MarkdownWriter) Write(r Report, destination string) error {
 func Render(r Report) string {
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "# agent-stack-audit — Laporan Scan\n\n")
+	fmt.Fprintf(&b, "# agent-stack-audit - Laporan Scan\n\n")
 	fmt.Fprintf(&b, "Dijalankan: %s\n", r.ScannedAt)
 	fmt.Fprintf(&b, "Host: %s\n", r.Host)
 	fmt.Fprintf(&b, "Skema versi: %s\n\n", r.SchemaVersion)
@@ -46,7 +46,7 @@ func Render(r Report) string {
 		b.WriteString("Tidak ada konflik hook ditemukan.\n\n")
 	}
 	for _, c := range r.Conflicts {
-		fmt.Fprintf(&b, "### %s — %s\n", c.ID, c.Confidence)
+		fmt.Fprintf(&b, "### %s - %s\n", c.ID, c.Confidence)
 		fmt.Fprintf(&b, "- Event: `%s`\n", c.Event)
 		fmt.Fprintf(&b, "- Matcher: `%s`\n", c.Matcher)
 		fmt.Fprintf(&b, "- Sumber: %s\n", strings.Join(c.Sources, ", "))
@@ -86,7 +86,7 @@ func Render(r Report) string {
 		b.WriteString("Tidak ada temuan trust report.\n\n")
 	}
 	for _, t := range r.TrustReport {
-		fmt.Fprintf(&b, "### %s — %s\n", t.ID, t.Confidence)
+		fmt.Fprintf(&b, "### %s - %s\n", t.ID, t.Confidence)
 		fmt.Fprintf(&b, "- Temuan: %s\n", t.Finding)
 		fmt.Fprintf(&b, "- Path: %s\n\n", t.Path)
 	}

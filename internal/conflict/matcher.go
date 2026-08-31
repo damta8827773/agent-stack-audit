@@ -7,7 +7,7 @@ import (
 
 // alternatives splits a Claude Code hook matcher into its literal
 // alternatives ("Write|Edit|MultiEdit" -> [Edit MultiEdit Write], sorted).
-// An empty matcher is treated as the same wildcard as "*" — both are
+// An empty matcher is treated as the same wildcard as "*" - both are
 // common real-world conventions meaning "every tool" (confirmed for
 // PostToolUse in claude-mem's hooks.json during FASE 0 research).
 //

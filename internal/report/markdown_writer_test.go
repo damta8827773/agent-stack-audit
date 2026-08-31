@@ -11,14 +11,14 @@ func TestRender_ContainsExpectedSections(t *testing.T) {
 	md := Render(sampleReport())
 
 	for _, want := range []string{
-		"# agent-stack-audit — Laporan Scan",
+		"# agent-stack-audit - Laporan Scan",
 		"## Ringkasan",
 		"## Konflik Hook",
 		"## Estimasi Token Overhead",
 		"## Audit Memori",
 		"## Trust Report",
-		"conflict-001 — CONFIRMED",
-		"trust-001 — LIKELY",
+		"conflict-001 - CONFIRMED",
+		"trust-001 - LIKELY",
 		"agent-stack-audit v0.1.0",
 	} {
 		if !strings.Contains(md, want) {

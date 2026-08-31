@@ -1,4 +1,4 @@
-// Package memoryaudit reports metadata about local memory/state stores —
+// Package memoryaudit reports metadata about local memory/state stores -
 // path, size, last-write time, and whether the permission bits allow
 // group/other to read it. It never opens a store to read actual record
 // content; for SQLite files it may open a connection strictly to list
@@ -43,7 +43,7 @@ type FSAuditor struct{}
 func NewFSAuditor() *FSAuditor { return &FSAuditor{} }
 
 // Audit reports metadata for each target that exists. A target that
-// doesn't exist (the store isn't installed) is skipped, not an error —
+// doesn't exist (the store isn't installed) is skipped, not an error -
 // mirroring discover's "missing dir is not an error" philosophy, since
 // most machines won't have every known memory system installed.
 func (a *FSAuditor) Audit(targets []config.MemoryTarget) []Entry {
@@ -75,8 +75,8 @@ func (a *FSAuditor) Audit(targets []config.MemoryTarget) []Entry {
 // isWorldReadable checks whether group or other read bits are set.
 // Meaningful on Unix; Windows has no equivalent permission-bit model (Go
 // synthesizes a fixed mode there that would false-flag ordinary files), so
-// the check is skipped — not silently claimed as a real cross-platform ACL
-// check — on Windows.
+// the check is skipped - not silently claimed as a real cross-platform ACL
+// check - on Windows.
 func isWorldReadable(info os.FileInfo) bool {
 	if runtime.GOOS == "windows" {
 		return false
@@ -86,7 +86,7 @@ func isWorldReadable(info os.FileInfo) bool {
 
 // readSchema opens a read-only connection strictly to list table names and
 // row counts. Any failure (locked file, not a valid SQLite file, corrupt
-// header) is swallowed — this is best-effort enrichment, not something
+// header) is swallowed - this is best-effort enrichment, not something
 // memory-audit's core metadata contract depends on.
 func readSchema(path string) []TableInfo {
 	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro&immutable=1")

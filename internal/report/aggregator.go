@@ -12,7 +12,7 @@ import (
 
 const SchemaVersion = "1.0"
 
-// BuildInput takes each module's own output type directly — the aggregator
+// BuildInput takes each module's own output type directly - the aggregator
 // is the only place that needs to know how to translate them into the
 // shared report.json shape, so individual modules stay decoupled from it
 // (Lampiran E: "aggregator tidak perlu tahu detail implementasi internal

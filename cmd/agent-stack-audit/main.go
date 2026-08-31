@@ -54,7 +54,7 @@ func Run(args []string, stdout, stderr io.Writer) int {
 }
 
 func printUsage(w io.Writer) {
-	fmt.Fprint(w, `agent-stack-audit — read-only audit of installed Claude Code skills, plugins, and hooks
+	fmt.Fprint(w, `agent-stack-audit - read-only audit of installed Claude Code skills, plugins, and hooks
 
 Usage:
   agent-stack-audit scan [flags]
@@ -206,7 +206,7 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 
 	// tui.Render always goes through lipgloss's default renderer, which
 	// detects terminal capability on its own and downgrades to plain text
-	// automatically when stdout isn't a color-capable TTY — this alone
+	// automatically when stdout isn't a color-capable TTY - this alone
 	// satisfies FASE 8's "default: on kalau terminal mendukung, otomatis
 	// fallback ke plain text kalau tidak". --tui is accepted for interface
 	// compatibility with the FASE 8 command reference but doesn't change

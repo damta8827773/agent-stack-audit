@@ -26,9 +26,9 @@ the latest tagged release receives security fixes until a 1.0 is cut.
 
 ## Scope
 
-In scope: the `agent-stack-audit` binary itself — its scanning logic,
+In scope: the `agent-stack-audit` binary itself - its scanning logic,
 parsing of untrusted config files (SKILL.md, plugin.json, settings.json,
 hooks.json), and report generation.
 
 Out of scope: the third-party tools it scans (ECC, gstack, claude-mem,
-superpowers, etc.) — report issues in those to their own repositories.
+superpowers, etc.) - report issues in those to their own repositories.

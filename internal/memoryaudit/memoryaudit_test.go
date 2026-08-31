@@ -82,8 +82,8 @@ func TestAudit_SQLiteSchemaOnlyNeverContent(t *testing.T) {
 	if e.Tables[0].RowCount != 3 {
 		t.Errorf("row count = %d, want 3", e.Tables[0].RowCount)
 	}
-	// The struct has no field capable of holding "secret_text" values —
-	// only Name and RowCount — so there is no way for actual row content
+	// The struct has no field capable of holding "secret_text" values -
+	// only Name and RowCount - so there is no way for actual row content
 	// to leak through this API even by accident.
 }
 

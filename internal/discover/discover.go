@@ -1,5 +1,5 @@
 // Package discover finds skills, plugins, and hooks registered in known
-// Claude Code config locations and reports what it found — it never
+// Claude Code config locations and reports what it found - it never
 // modifies anything.
 package discover
 
@@ -23,6 +23,7 @@ type SkillEntry struct {
 	Type           string // "skill" | "plugin" | "hook"
 	HasFrontmatter bool
 	AlwaysOn       bool
+	Description    string // frontmatter/manifest description, when present - used by trust-report's generic-copy check
 	Event          string // set only when Type == "hook"
 	Matcher        string // set only when Type == "hook"
 	Command        string // set only when Type == "hook"
@@ -33,7 +34,7 @@ type Scanner interface {
 }
 
 // maxDepth: directories are read at depth 0 (the root itself) through
-// maxDepth inclusive — four ReadDir calls deep — matching FASE 3's "scan
+// maxDepth inclusive - four ReadDir calls deep - matching FASE 3's "scan
 // rekursif maksimal 3 level kedalaman" measured as levels below the root.
 // This is deep enough to reach a marketplace-installed plugin's manifest
 // (plugins/marketplaces/<vendor>/.claude-plugin/plugin.json is exactly 3
@@ -44,7 +45,7 @@ const maxDepth = 3
 // project a raw (non-plugin-manifest) skill or hook belongs to, based on
 // naming conventions observed during FASE 0 research (e.g.
 // "ecc-tdd-workflow", "gstack-context-bill"). When no prefix matches, the
-// literal directory name / "unknown" is used instead of guessing — see
+// literal directory name / "unknown" is used instead of guessing - see
 // design principle 3 (jujur soal ketidakpastian).
 var knownVendorPrefixes = []string{
 	"ecc", "gstack", "superpowers", "claude-mem", "watermarks-remover", "graphify",
@@ -195,7 +196,7 @@ func handleFile(name, path string, entries *[]SkillEntry, errs *[]error) {
 		// gstack) live in each plugin's own hooks/hooks.json, not merged
 		// into the user's settings.json as FASE 3's text alone implies.
 		// Scanning only settings.json would make conflict-check blind to
-		// the real, verified conflicts found during research — so
+		// the real, verified conflicts found during research - so
 		// hooks.json is treated the same way.
 		parseHooksFile(path, "hooks.json", entries, errs)
 	}
@@ -216,7 +217,7 @@ func parseSkillMD(path string, entries *[]SkillEntry, errs *[]error) {
 	}
 
 	data = stripBOM(data)
-	hasFrontmatter, fmErr := parseFrontmatter(data)
+	fm, hasFrontmatter, fmErr := parseFrontmatter(data)
 	if fmErr != nil {
 		*errs = append(*errs, fmt.Errorf("malformed frontmatter in %s: %w", path, fmErr))
 	}
@@ -228,33 +229,35 @@ func parseSkillMD(path string, entries *[]SkillEntry, errs *[]error) {
 		Type:           "skill",
 		HasFrontmatter: hasFrontmatter,
 		AlwaysOn:       isAlwaysOn(path),
+		Description:    fm.Description,
 	})
 }
 
 // parseFrontmatter reports whether YAML frontmatter delimited by --- lines
 // was found, and a non-nil error if it was found but malformed (per FASE 3:
-// malformed files are a warning, not fatal — the caller decides how to
+// malformed files are a warning, not fatal - the caller decides how to
 // surface that).
-func parseFrontmatter(content []byte) (bool, error) {
+func parseFrontmatter(content []byte) (frontmatter, bool, error) {
 	text := string(content)
 	if !strings.HasPrefix(text, "---") {
-		return false, nil
+		return frontmatter{}, false, nil
 	}
 	rest := text[3:]
 	end := strings.Index(rest, "\n---")
 	if end == -1 {
-		return false, nil
+		return frontmatter{}, false, nil
 	}
 	block := rest[:end]
 	var fm frontmatter
 	if err := yaml.Unmarshal([]byte(block), &fm); err != nil {
-		return true, err
+		return frontmatter{}, true, err
 	}
-	return true, nil
+	return fm, true, nil
 }
 
 type jsonManifest struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 func parseManifestJSON(path, kind string, entries *[]SkillEntry, errs *[]error) {
@@ -281,6 +284,7 @@ func parseManifestJSON(path, kind string, entries *[]SkillEntry, errs *[]error) 
 		Path:         path,
 		Type:         "plugin",
 		AlwaysOn:     false,
+		Description:  m.Description,
 	})
 }
 
@@ -333,7 +337,7 @@ func parseHooksFile(path, kind string, entries *[]SkillEntry, errs *[]error) {
 // inferHookSource picks the most reliable source_system it can for a hook
 // registration. A plugin's own hooks.json sits next to (or one level below)
 // its .claude-plugin/plugin.json, which is authoritative and doesn't depend
-// on the command string containing a recognizable name — many real hook
+// on the command string containing a recognizable name - many real hook
 // commands only reference "${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" with no
 // vendor name in it at all (confirmed for superpowers during FASE 0
 // research). Falls back to the command-string heuristic, then to the
@@ -397,7 +401,7 @@ func inferSourceFromCommand(cmd string) string {
 	return "unknown"
 }
 
-// isAlwaysOn implements FASE 3's "dilihat dari lokasi file — root skills
+// isAlwaysOn implements FASE 3's "dilihat dari lokasi file - root skills
 // dir vs plugin-managed": anything under a plugins/ tree is installed and
 // invoked on-demand; anything directly under skills/ loads every session.
 func isAlwaysOn(path string) bool {
@@ -410,7 +414,7 @@ func isAlwaysOn(path string) bool {
 
 // stripBOM removes a leading UTF-8 byte-order mark. Editors and tools on
 // Windows commonly write one (e.g. PowerShell's `Out-File`/`Set-Content
-// -Encoding utf8`) — encoding/json and a plain "---" prefix check both
+// -Encoding utf8`) - encoding/json and a plain "---" prefix check both
 // treat it as invalid content, which would silently misreport a valid
 // config file as malformed on Windows.
 func stripBOM(data []byte) []byte {

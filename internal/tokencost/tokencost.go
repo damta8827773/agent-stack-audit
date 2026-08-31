@@ -1,6 +1,6 @@
 // Package tokencost estimates the token overhead of always-on skill
 // instructions using a flat character-to-token ratio. This is an
-// approximation, not a real tokenizer — FASE 5 requires the estimation
+// approximation, not a real tokenizer - FASE 5 requires the estimation
 // method to be reported explicitly so nobody mistakes it for an exact
 // count from the official API.
 package tokencost
@@ -36,7 +36,7 @@ func NewCharRatioEstimator() *CharRatioEstimator { return &CharRatioEstimator{} 
 
 // Estimate sums the character length of every always-on skill file's
 // content, grouped by source system, and converts the total to an
-// estimated token count. Only Type=="skill" && AlwaysOn entries count —
+// estimated token count. Only Type=="skill" && AlwaysOn entries count -
 // on-demand plugins and hooks aren't loaded into context every session, so
 // they contribute no overhead to measure here.
 func (e *CharRatioEstimator) Estimate(entries []discover.SkillEntry) []Entry {
@@ -71,7 +71,7 @@ func (e *CharRatioEstimator) Estimate(entries []discover.SkillEntry) []Entry {
 	return result
 }
 
-// Total sums estimated tokens across every entry — the
+// Total sums estimated tokens across every entry - the
 // summary.estimated_token_overhead figure in report.json.
 func Total(entries []Entry) int {
 	total := 0

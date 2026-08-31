@@ -20,7 +20,7 @@ func writeFixtureFile(t *testing.T, path, content string) {
 
 // buildTwoSystemConflictFixture reproduces the real, FASE 0-confirmed
 // conflict (claude-mem vs superpowers, SessionStart, identical matcher)
-// used across the discover/conflict golden fixtures — this is the
+// used across the discover/conflict golden fixtures - this is the
 // integration-level version FASE 10 calls for: "Jalankan scan penuh
 // terhadap fixture gabungan yang mensimulasikan 2+ skill system dengan
 // hook konflik yang disengaja."
