@@ -1,159 +1,164 @@
-<svg width="1200" height="500" viewBox="0 0 1200 500" xmlns="http://www.w3.org/2000/svg">
+<svg width="1400" height="700" viewBox="0 0 1400 700" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <style>
       .mono { font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace; }
     </style>
-    <radialGradient id="bgGlow" cx="50%" cy="30%" r="75%">
-      <stop offset="0%" stop-color="#132030"/>
-      <stop offset="100%" stop-color="#05080d"/>
+    <radialGradient id="bgGlow" cx="50%" cy="18%" r="90%">
+      <stop offset="0%" stop-color="#132436"/>
+      <stop offset="55%" stop-color="#0a1420"/>
+      <stop offset="100%" stop-color="#04070c"/>
     </radialGradient>
-    <linearGradient id="agentRing" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
-    </linearGradient>
-    <linearGradient id="stackRing" x1="0" y1="0" x2="1" y2="1">
+
+    <linearGradient id="titleMid" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
     </linearGradient>
-    <linearGradient id="auditRing" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#c084fc"/>
-      <stop offset="100%" stop-color="#f472b6"/>
+    <linearGradient id="titleBottom" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#2dd4bf"/>
     </linearGradient>
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
+
+    <radialGradient id="orbAgent" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#123244"/>
+      <stop offset="100%" stop-color="#081722"/>
+    </radialGradient>
+    <radialGradient id="orbStack" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#1b2350"/>
+      <stop offset="100%" stop-color="#0c1030"/>
+    </radialGradient>
+    <radialGradient id="orbAudit" cx="50%" cy="42%" r="60%">
+      <stop offset="0%" stop-color="#152c2a"/>
+      <stop offset="100%" stop-color="#08120f"/>
+    </radialGradient>
+
+    <linearGradient id="ringAgent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#67e8f9"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="ringStack" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="ringAudit" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="100%" stop-color="#22c55e"/>
+    </linearGradient>
+
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="9" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="glowSoft" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <linearGradient id="panelBorder" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a3b52" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#141d2b" stop-opacity="0.4"/>
+    </linearGradient>
   </defs>
 
-  <rect width="1200" height="500" fill="url(#bgGlow)"/>
+  <rect width="1400" height="700" fill="url(#bgGlow)"/>
 
-  <!-- faint circuit-board traces -->
-  <g stroke="#1c2b3a" stroke-width="1.5" fill="none" opacity="0.9">
-    <path d="M0,60 H140 V20 H320"/>
-    <path d="M0,440 H90 V470 H260"/>
-    <path d="M1200,90 H1050 V40 H880"/>
-    <path d="M1200,420 H1080 V460 H900"/>
-    <path d="M60,0 V90"/>
-    <path d="M1140,0 V70"/>
-    <path d="M40,500 V430"/>
-    <path d="M1160,500 V410"/>
+  <!-- symmetric faint circuit traces + binary, both sides -->
+  <g stroke="#16222f" stroke-width="1.5" fill="none">
+    <path d="M0,50 H120 V16 H280"/>
+    <path d="M1400,50 H1280 V16 H1120"/>
+    <path d="M0,650 H90 V684 H240"/>
+    <path d="M1400,650 H1310 V684 H1160"/>
   </g>
-  <g fill="#25384a">
-    <circle cx="140" cy="20" r="3"/>
-    <circle cx="320" cy="20" r="3"/>
-    <circle cx="90" cy="470" r="3"/>
-    <circle cx="1050" cy="40" r="3"/>
-    <circle cx="880" cy="40" r="3"/>
-    <circle cx="1080" cy="460" r="3"/>
+  <g fill="#22344a">
+    <circle cx="120" cy="16" r="3"/><circle cx="280" cy="16" r="3"/>
+    <circle cx="1280" cy="16" r="3"/><circle cx="1120" cy="16" r="3"/>
+    <circle cx="90" cy="684" r="3"/><circle cx="1310" cy="684" r="3"/>
   </g>
-  <g class="mono" fill="#16222e" font-size="13">
-    <text x="24" y="16">01001010</text>
-    <text x="1060" y="24">11001101</text>
-    <text x="18" y="490">0110</text>
-    <text x="1090" y="495">10110100</text>
+  <g class="mono" fill="#182636" font-size="14">
+    <text x="20" y="14">01001010</text>
+    <text x="1290" y="14" text-anchor="end">11001101</text>
+    <text x="20" y="694">0110 1010</text>
+    <text x="1380" y="694" text-anchor="end">10110100</text>
   </g>
 
   <!-- title -->
-  <text x="600" y="78" text-anchor="middle" class="mono" font-size="50" font-weight="700" fill="#eef4fb">agent-stack-audit</text>
-  <text x="600" y="112" text-anchor="middle" class="mono" font-size="19" fill="#8ea3b8">Audit your AI agent's skill stack</text>
+  <text x="700" y="98" text-anchor="middle" class="mono" font-size="58" font-weight="800" fill="#f3f7fb">AI AGENT</text>
+  <text x="700" y="164" text-anchor="middle" class="mono" font-size="58" font-weight="800" fill="url(#titleMid)">STACK SYSTEM</text>
+  <text x="700" y="230" text-anchor="middle" class="mono" font-size="58" font-weight="800" fill="url(#titleBottom)">AUDIT ENGINE</text>
+  <text x="700" y="270" text-anchor="middle" class="mono" font-size="21" fill="#8ea3b8">Audit your AI agent's skill stack</text>
 
-  <!-- connecting rail -->
-  <line x1="335" y1="228" x2="600" y2="228" stroke="#3a4f63" stroke-width="2" stroke-dasharray="4 5"/>
-  <line x1="600" y1="228" x2="865" y2="228" stroke="#3a4f63" stroke-width="2" stroke-dasharray="4 5"/>
-
-  <!-- AGENT icon -->
-  <g transform="translate(280,228)" filter="url(#softGlow)">
-    <circle r="58" fill="#0c1620" stroke="url(#agentRing)" stroke-width="2.5"/>
-    <g stroke="url(#agentRing)" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="-22" y="-16" width="44" height="34" rx="10"/>
-      <circle cx="-9" cy="-1" r="3.2" fill="url(#agentRing)" stroke="none"/>
-      <circle cx="9" cy="-1" r="3.2" fill="url(#agentRing)" stroke="none"/>
-      <path d="M-11,11 H11"/>
-      <path d="M0,-16 V-27"/>
-      <circle cx="0" cy="-30" r="3" fill="none"/>
-      <path d="M-22,4 H-34 M-22,-6 H-31"/>
-      <path d="M22,4 H34 M22,-6 H31"/>
-      <path d="M-6,18 V26 M6,18 V26"/>
+  <!-- ============ PANEL 1: AI AGENT ============ -->
+  <g transform="translate(90,320)">
+    <rect width="380" height="300" rx="18" fill="#0b131d" stroke="url(#panelBorder)" stroke-width="1.5"/>
+    <circle cx="190" cy="118" r="82" fill="url(#orbAgent)" stroke="url(#ringAgent)" stroke-width="2.5" filter="url(#glow)"/>
+    <g transform="translate(190,118)" stroke="url(#ringAgent)" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" filter="url(#glowSoft)">
+      <rect x="-30" y="-22" width="60" height="46" rx="14"/>
+      <circle cx="-12" cy="-1" r="4.4" fill="url(#ringAgent)" stroke="none"/>
+      <circle cx="12" cy="-1" r="4.4" fill="url(#ringAgent)" stroke="none"/>
+      <path d="M-14,15 H14"/>
+      <path d="M0,-22 V-38"/>
+      <circle cx="0" cy="-42" r="4" fill="none"/>
+      <path d="M-30,6 H-46 M-30,-8 H-42"/>
+      <path d="M30,6 H46 M30,-8 H42"/>
+      <path d="M-9,24 V34 M9,24 V34"/>
     </g>
+    <text x="190" y="240" text-anchor="middle" class="mono" font-size="25" font-weight="700" fill="#e7eef6">AI AGENT</text>
+    <text x="190" y="270" text-anchor="middle" class="mono" font-size="16" fill="#7c92a8">Think. Learn. Act.</text>
   </g>
-  <text x="280" y="308" text-anchor="middle" class="mono" font-size="18" font-weight="600" fill="#dbe7f2">Agent</text>
 
-  <!-- STACK icon: plugin + gear + hook layered -->
-  <g transform="translate(600,228)" filter="url(#softGlow)">
-    <circle r="58" fill="#0c1620" stroke="url(#stackRing)" stroke-width="2.5"/>
-    <!-- puzzle/plugin piece: square body with a connector tab on top -->
-    <g transform="translate(0,-22)" stroke="url(#stackRing)" stroke-width="2.2" fill="none" stroke-linejoin="round">
-      <path d="M-10,-2 H-4 V-8 H4 V-2 H10 V10 H-10 Z"/>
-    </g>
-    <!-- gear -->
-    <g transform="translate(0,3)" stroke="url(#stackRing)" stroke-width="2.2" fill="none">
-      <circle r="10"/>
-      <circle r="3.4" fill="url(#stackRing)" stroke="none"/>
-      <g stroke-linecap="round">
-        <path d="M0,-13 V-17"/>
-        <path d="M0,13 V17"/>
-        <path d="M-13,0 H-17"/>
-        <path d="M13,0 H17"/>
-        <path d="M-9,-9 L-12,-12"/>
-        <path d="M9,-9 L12,-12"/>
-        <path d="M-9,9 L-12,12"/>
-        <path d="M9,9 L12,12"/>
+  <!-- ============ PANEL 2: STACK SYSTEM ============ -->
+  <g transform="translate(510,320)">
+    <rect width="380" height="300" rx="18" fill="#0b0f1d" stroke="url(#panelBorder)" stroke-width="1.5"/>
+    <circle cx="190" cy="118" r="82" fill="url(#orbStack)" stroke="url(#ringStack)" stroke-width="2.5" filter="url(#glow)"/>
+    <g transform="translate(190,90)" stroke="url(#ringStack)" stroke-width="3" fill="none" stroke-linejoin="round" filter="url(#glowSoft)">
+      <!-- plug -->
+      <path d="M-15,4 H-6 V-6 H6 V4 H15 V22 H-15 Z" transform="translate(0,-6)"/>
+      <!-- gear -->
+      <g transform="translate(0,42)">
+        <circle r="15"/>
+        <circle r="5" fill="url(#ringStack)" stroke="none"/>
+        <g stroke-linecap="round">
+          <path d="M0,-19 V-25"/><path d="M0,19 V25"/>
+          <path d="M-19,0 H-25"/><path d="M19,0 H25"/>
+          <path d="M-13,-13 L-17,-17"/><path d="M13,-13 L17,-17"/>
+          <path d="M-13,13 L-17,17"/><path d="M13,13 L17,17"/>
+        </g>
+      </g>
+      <!-- hook -->
+      <g transform="translate(0,86)" stroke-linecap="round">
+        <path d="M-11,-12 v14 a11,11 0 0 0 22,0 v-20"/>
       </g>
     </g>
-    <!-- hook -->
-    <g transform="translate(0,26)" stroke="url(#stackRing)" stroke-width="2.4" fill="none" stroke-linecap="round">
-      <path d="M-7,-9 v10 a7,7 0 0 0 14,0 v-14"/>
-    </g>
+    <text x="190" y="240" text-anchor="middle" class="mono" font-size="25" font-weight="700" fill="#e7eef6">STACK SYSTEM</text>
+    <text x="190" y="270" text-anchor="middle" class="mono" font-size="16" fill="#7c92a8">Skills. Plugins. Hooks.</text>
   </g>
-  <text x="600" y="308" text-anchor="middle" class="mono" font-size="18" font-weight="600" fill="#dbe7f2">Stack</text>
 
-  <!-- AUDIT icon: shield + check, chip + lock accents -->
-  <g transform="translate(920,228)" filter="url(#softGlow)">
-    <circle r="58" fill="#0c1620" stroke="url(#auditRing)" stroke-width="2.5"/>
-    <!-- faint chip accent -->
-    <g transform="translate(-30,-24)" stroke="#5b3a63" stroke-width="1.6" fill="none" opacity="0.85">
-      <rect x="-7" y="-7" width="14" height="14" rx="2"/>
-      <path d="M-7,-3 H-11 M-7,3 H-11 M7,-3 H11 M7,3 H11 M-3,-7 V-11 M3,-7 V-11 M-3,7 V11 M3,7 V11"/>
+  <!-- ============ PANEL 3: AUDIT ENGINE ============ -->
+  <g transform="translate(930,320)">
+    <rect width="380" height="300" rx="18" fill="#081712" stroke="url(#panelBorder)" stroke-width="1.5"/>
+    <circle cx="190" cy="118" r="82" fill="url(#orbAudit)" stroke="url(#ringAudit)" stroke-width="2.5" filter="url(#glow)"/>
+    <g stroke="#3f6b5b" stroke-width="1.8" fill="none" opacity="0.9">
+      <g transform="translate(150,78)">
+        <rect x="-9" y="-9" width="18" height="18" rx="2"/>
+        <path d="M-9,-4 H-15 M-9,4 H-15 M9,-4 H15 M9,4 H15 M-4,-9 V-15 M4,-9 V-15 M-4,9 V15 M4,9 V15"/>
+      </g>
+      <g transform="translate(230,78)">
+        <rect x="-7" y="-1" width="14" height="12" rx="2"/>
+        <path d="M-5,-1 v-5 a5,5 0 0 1 10,0 v5"/>
+      </g>
     </g>
-    <!-- faint padlock accent -->
-    <g transform="translate(30,-24)" stroke="#5b3a63" stroke-width="1.6" fill="none" opacity="0.85">
-      <rect x="-6" y="-1" width="12" height="10" rx="2"/>
-      <path d="M-4,-1 v-4 a4,4 0 0 1 8,0 v4"/>
+    <g transform="translate(190,124)" stroke="url(#ringAudit)" stroke-width="3.2" fill="none" stroke-linejoin="round" stroke-linecap="round" filter="url(#glowSoft)">
+      <path d="M0,-30 L27,-19 V10 C27,30 14,44 0,50 C-14,44 -27,30 -27,10 V-19 Z"/>
+      <path d="M-12,3 L-3,15 L15,-12" transform="translate(0,4)"/>
     </g>
-    <!-- shield with check -->
-    <g stroke="url(#auditRing)" stroke-width="2.6" fill="none" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M0,-20 L18,-13 V6 C18,20 9,29 0,33 C-9,29 -18,20 -18,6 V-13 Z"/>
-      <path d="M-8,2 L-2,10 L10,-8" transform="translate(0,3)"/>
-    </g>
+    <text x="190" y="240" text-anchor="middle" class="mono" font-size="25" font-weight="700" fill="#e7eef6">AUDIT ENGINE</text>
+    <text x="190" y="270" text-anchor="middle" class="mono" font-size="16" fill="#7c92a8">Scan. Analyze. Assure.</text>
   </g>
-  <text x="920" y="308" text-anchor="middle" class="mono" font-size="18" font-weight="600" fill="#dbe7f2">Audit</text>
 
-  <!-- bottom result panel -->
-  <rect x="260" y="352" width="680" height="112" rx="10" fill="#0c1620" stroke="#22303e" stroke-width="1.5"/>
-  <g transform="translate(310,408)" filter="url(#softGlow)">
-    <circle r="30" fill="none" stroke="url(#stackRing)" stroke-width="2"/>
-    <rect x="-11" y="-14" width="22" height="8" rx="2" fill="none" stroke="url(#stackRing)" stroke-width="1.6"/>
-    <rect x="-11" y="-4" width="22" height="8" rx="2" fill="none" stroke="url(#stackRing)" stroke-width="1.6"/>
-    <circle cx="14" cy="12" r="9" fill="none" stroke="#cbd5e1" stroke-width="2"/>
-    <line x1="20" y1="18" x2="27" y2="25" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
-  </g>
-  <g class="mono" font-size="15">
-    <circle cx="470" cy="382" r="6" fill="#f85149"/>
-    <text x="486" y="387" fill="#dbe7f2">Conflicts</text>
-    <text x="486" y="405" fill="#63798e" font-size="12">2 detected</text>
+  <!-- connectors between panels -->
+  <line x1="470" y1="470" x2="510" y2="470" stroke="#33465c" stroke-width="2" stroke-dasharray="4 5"/>
+  <line x1="890" y1="470" x2="930" y2="470" stroke="#33465c" stroke-width="2" stroke-dasharray="4 5"/>
 
-    <circle cx="620" cy="382" r="6" fill="#d29922"/>
-    <text x="636" y="387" fill="#dbe7f2">Warnings</text>
-    <text x="636" y="405" fill="#63798e" font-size="12">3 found</text>
-
-    <circle cx="770" cy="382" r="6" fill="#6e7681"/>
-    <text x="786" y="387" fill="#dbe7f2">Info</text>
-    <text x="786" y="405" fill="#63798e" font-size="12">1 optimization</text>
-  </g>
-  <text x="470" y="440" class="mono" font-size="13" fill="#4c6178">trust-report.md generated</text>
-
-  <text x="1152" y="486" class="mono" font-size="14" fill="#4c6178" text-anchor="end">github.com/damta8827773/agent-stack-audit</text>
+  <!-- footer -->
+  <text x="700" y="662" text-anchor="middle" class="mono" font-size="16" fill="#8ea3b8">by damta8827773 · GitHub Repository</text>
+  <text x="700" y="686" text-anchor="middle" class="mono" font-size="15" fill="#5b7288">github.com/damta8827773/agent-stack-audit</text>
 </svg>
