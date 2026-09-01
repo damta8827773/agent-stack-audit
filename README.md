@@ -312,12 +312,15 @@ A sample of the generated `report.md`:
 
 ## Prior art
 
-None of this is built in a vacuum. Nine projects shaped the design directly:
+None of this is built in a vacuum. Nine projects were read during FASE 0
+research; most shaped a specific module or decision directly (traceable
+to an actual file or test below), two were more general background
+reading without a single artifact to point to:
 
 | Project | What it contributed |
 |---|---|
-| [mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills) | Structured skill layout with YAML frontmatter - reference for the confidence-level scheme |
-| [tashfeenahmed/freellmapi](https://github.com/tashfeenahmed/freellmapi) | CLI + local dashboard pattern |
+| [mukul975/Anthropic-Cybersecurity-Skills](https://github.com/mukul975/Anthropic-Cybersecurity-Skills) | Background reading on structured skill layout with YAML frontmatter - general context during FASE 0, not the source of the confidence-level scheme (that's Graphify, below) |
+| [tashfeenahmed/freellmapi](https://github.com/tashfeenahmed/freellmapi) | Background reading on CLI + local dashboard distribution - the dashboard half doesn't apply here, since this project deliberately has no GUI (section 4) |
 | [obra/superpowers](https://github.com/obra/superpowers) | Staged workflow with real approval checkpoints - the pattern this spec's own phase structure follows; also one half of the real CONFIRMED conflict fixture used in this repo's own tests |
 | [mattpocock/skills](https://github.com/mattpocock/skills) | Two install paths (managed plugin vs. copy-editable) |
 | [affaan-m/ECC](https://github.com/affaan-m/ECC) | Most complex of the nine - AgentShield config scanner, Memory Vault, 8-9 harnesses supported; the main case study for what a serious multi-tool install looks like |
