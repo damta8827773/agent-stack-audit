@@ -15,7 +15,9 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
+	"github.com/damta8827773/agent-stack-audit/internal/auditlog"
 	"github.com/damta8827773/agent-stack-audit/internal/config"
 	"github.com/damta8827773/agent-stack-audit/internal/conflict"
 	"github.com/damta8827773/agent-stack-audit/internal/discover"
@@ -47,6 +49,10 @@ func Run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runScan(args[1:], stdin, stdout, stderr)
 	case "init-config":
 		return runInitConfig(args[1:], stdout, stderr)
+	case "verify-log":
+		return runVerifyLog(args[1:], stdout, stderr)
+	case "diff":
+		return runDiff(args[1:], stdout, stderr)
 	case "version":
 		fmt.Fprintf(stdout, "agent-stack-audit v%s\n", version.Version)
 		return 0
@@ -66,6 +72,8 @@ func printUsage(w io.Writer) {
 Usage:
   agent-stack-audit scan [flags]
   agent-stack-audit init-config
+  agent-stack-audit verify-log
+  agent-stack-audit diff
   agent-stack-audit version
 
 Scan flags:
@@ -85,9 +93,18 @@ Scan flags:
                          file content - shows an explicit consent prompt before any
                          network call, every scan (this is the only network-touching flag)
 
+Every successful scan also appends one summary-only entry to the local,
+hash-chained history at ~/.agent-stack-audit/audit-log.jsonl (override with
+AGENT_STACK_AUDIT_HOME). Two commands read that history back:
+
+  agent-stack-audit verify-log   recompute the hash chain end to end and
+                                  report the first tampered/missing entry, if any
+  agent-stack-audit diff         show what changed between the two most recent scans
+
 Exit codes:
   0  scan succeeded, no CONFIRMED findings
-  1  scan succeeded, at least one CONFIRMED finding (useful as a CI gate)
+  1  scan succeeded, at least one CONFIRMED finding (useful as a CI gate);
+     verify-log also uses 1 to report a broken hash chain
   2  fatal error
 `)
 }
@@ -214,6 +231,26 @@ func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		VulnAudit:   vulnFindings,
 	})
 
+	logEntry := auditlog.Entry{
+		Timestamp:     time.Now().UTC().Format(time.RFC3339),
+		Host:          r.Host,
+		Version:       version.Version,
+		SchemaVersion: r.SchemaVersion,
+		ModulesRun:    modulesRunList(enabled, *vulnCheck),
+		Summary: auditlog.Summary{
+			TotalSkillsFound:       r.Summary.TotalSkillsFound,
+			TotalHooksFound:        r.Summary.TotalHooksFound,
+			ConflictsFound:         r.Summary.ConflictsFound,
+			EstimatedTokenOverhead: r.Summary.EstimatedTokenOverhead,
+			MemoryStoresFound:      r.Summary.MemoryStoresFound,
+			TrustWarnings:          r.Summary.TrustWarnings,
+			VulnerabilitiesFound:   r.Summary.VulnerabilitiesFound,
+		},
+	}
+	if err := auditlog.Append(config.AuditLogPath(), logEntry); err != nil {
+		fmt.Fprintf(stderr, "warning: gagal menulis ke audit log (%s): %v\n", config.AuditLogPath(), err)
+	}
+
 	if outputFormat == "json" || outputFormat == "both" {
 		if err := report.NewJSONWriter().Write(r, dest); err != nil {
 			fmt.Fprintf(stderr, "error writing report.json: %v\n", err)
@@ -250,6 +287,113 @@ func runScan(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 1
 	}
 	return 0
+}
+
+// modulesRunList records which modules actually ran this scan (honoring
+// --only) plus "vuln-check" when that opt-in flag was used, so a later
+// `diff` between two scans that enabled different modules can say so
+// instead of presenting a misleading delta.
+func modulesRunList(enabled map[string]bool, vulnCheck bool) []string {
+	var mods []string
+	for _, m := range allModules {
+		if enabled[m] {
+			mods = append(mods, m)
+		}
+	}
+	if vulnCheck {
+		mods = append(mods, "vuln-check")
+	}
+	return mods
+}
+
+func runVerifyLog(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("verify-log", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+
+	path := config.AuditLogPath()
+	result, err := auditlog.Verify(path)
+	if err != nil {
+		fmt.Fprintf(stderr, "error membaca %s: %v\n", path, err)
+		return 2
+	}
+
+	if result.TotalEntries == 0 {
+		fmt.Fprintf(stdout, "%s: belum ada entri (belum pernah scan).\n", path)
+		return 0
+	}
+	if result.OK {
+		fmt.Fprintf(stdout, "%s: OK - %d entri, hash-chain utuh.\n", path, result.TotalEntries)
+		return 0
+	}
+	fmt.Fprintf(stdout, "%s: RUSAK pada baris %d dari %d - %s\n", path, result.BrokenLine, result.TotalEntries, result.Reason)
+	return 1
+}
+
+func runDiff(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("diff", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+
+	path := config.AuditLogPath()
+	entries, err := auditlog.ReadAll(path)
+	if err != nil {
+		fmt.Fprintf(stderr, "error membaca %s: %v\n", path, err)
+		return 2
+	}
+	if len(entries) < 2 {
+		fmt.Fprintf(stdout, "%s: belum cukup riwayat untuk diff (butuh minimal 2 scan, ada %d).\n", path, len(entries))
+		return 0
+	}
+
+	from, to := entries[len(entries)-2], entries[len(entries)-1]
+	fmt.Fprintf(stdout, "Dibandingkan: %s -> %s\n\n", from.Timestamp, to.Timestamp)
+	printDelta(stdout, "Total skill ditemukan", from.Summary.TotalSkillsFound, to.Summary.TotalSkillsFound)
+	printDelta(stdout, "Total hook ditemukan", from.Summary.TotalHooksFound, to.Summary.TotalHooksFound)
+	printDelta(stdout, "Konflik ditemukan", from.Summary.ConflictsFound, to.Summary.ConflictsFound)
+	printDelta(stdout, "Estimasi token overhead", from.Summary.EstimatedTokenOverhead, to.Summary.EstimatedTokenOverhead)
+	printDelta(stdout, "Memory store ditemukan", from.Summary.MemoryStoresFound, to.Summary.MemoryStoresFound)
+	printDelta(stdout, "Peringatan trust", from.Summary.TrustWarnings, to.Summary.TrustWarnings)
+	printDelta(stdout, "Kerentanan ditemukan", from.Summary.VulnerabilitiesFound, to.Summary.VulnerabilitiesFound)
+
+	if !sameModules(from.ModulesRun, to.ModulesRun) {
+		fmt.Fprintln(stdout, "\nCatatan: dua scan ini menjalankan modul yang berbeda (--only berbeda),")
+		fmt.Fprintln(stdout, "sebagian angka di atas mungkin tidak mencerminkan perubahan nyata.")
+	}
+	return 0
+}
+
+func printDelta(w io.Writer, label string, from, to int) {
+	delta := to - from
+	if delta == 0 {
+		fmt.Fprintf(w, "%s: %d (tidak berubah)\n", label, to)
+		return
+	}
+	sign := ""
+	if delta > 0 {
+		sign = "+"
+	}
+	fmt.Fprintf(w, "%s: %d -> %d (%s%d)\n", label, from, to, sign, delta)
+}
+
+func sameModules(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	set := make(map[string]bool, len(a))
+	for _, m := range a {
+		set[m] = true
+	}
+	for _, m := range b {
+		if !set[m] {
+			return false
+		}
+	}
+	return true
 }
 
 func resolveModules(only string) map[string]bool {

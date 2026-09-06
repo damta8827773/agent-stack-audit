@@ -20,7 +20,12 @@ flowchart TD
     H --> I[report.md]
     H --> J[report.json]
     H --> K[terminal summary]
+    H --> M[auditlog: append hash-chained<br/>summary entry to ~/.agent-stack-audit/]
 ```
+
+`agent-stack-audit verify-log` and `agent-stack-audit diff` are separate
+commands that only read `auditlog`'s file back - they don't re-run any
+scan.
 
 `config` is the only package that knows about `CLAUDE_CONFIG_DIR` and
 `CLAUDE_MEM_DATA_DIR` environment variable overrides and the optional
@@ -39,6 +44,7 @@ internal/memoryaudit/    metadata-only report on known memory stores, schema-onl
 internal/trustreport/    LICENSE/SECURITY.md presence, world-writable dirs, network-calling hooks, undocumented scripts
 internal/vulnaudit/      go.mod/package.json/requirements.txt manifest parsing + OSV.dev query (opt-in, --vuln-check)
 internal/fix/            CONFIRMED-conflict suggestions for --fix; never edits another tool's files
+internal/auditlog/       append-only, SHA-256 hash-chained scan history (~/.agent-stack-audit/); verify-log/diff read it back
 internal/report/         DTOs matching report.json's schema, aggregator, JSON writer, Markdown writer
 internal/tui/            lipgloss terminal summary render
 internal/version/        single Version constant
@@ -94,7 +100,7 @@ Framework 2.0 function each module's behavior lines up with.
 | Protect | `trust-report` - permission checks, LICENSE/SECURITY.md presence |
 | Detect | `conflict-check`, `vuln-audit` - overlapping hooks, known CVEs |
 | Respond | Reports + manual suggestions (`--fix`); no auto-response in v0.1 |
-| Recover | Not yet implemented - see [docs/ROADMAP.md](ROADMAP.md)'s hash-chained audit log / `verify-log` item |
+| Recover | `internal/auditlog` - append-only, hash-chained scan history; `verify-log` detects a tampered/deleted entry, `diff` shows what changed since the last scan. Detection, not prevention - see [docs/SECURITY_MODEL.md](SECURITY_MODEL.md) |
 
 Also followed, and actually verifiable (unlike a certification claim):
 [SPDX License Identifiers](https://spdx.dev/) on every `.go` file,

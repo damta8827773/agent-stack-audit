@@ -37,3 +37,10 @@ is called out here.
   checked-in demo fixture (`testdata/demo/`) instead of manual OS
   screenshot tools - see docs/CAPTURING_SCREENSHOTS.md. Never
   generative-AI video/images for product demos (CLAUDE.md section 2).
+- `internal/auditlog`: every scan appends a summary-only, SHA-256
+  hash-chained entry to `~/.agent-stack-audit/audit-log.jsonl` (override
+  with `AGENT_STACK_AUDIT_HOME`). New `agent-stack-audit verify-log`
+  command recomputes the chain and reports the first tampered/deleted
+  entry; new `agent-stack-audit diff` command shows the delta between
+  the two most recent scans. Detects tampering, does not prevent it -
+  see docs/SECURITY_MODEL.md section 6.

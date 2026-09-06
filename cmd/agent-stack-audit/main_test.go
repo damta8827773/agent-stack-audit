@@ -419,3 +419,136 @@ func TestRun_MissingDirectoryIsNotFatal(t *testing.T) {
 		t.Fatalf("exit code = %d, want 0 for an entirely empty/missing config dir, stderr: %s", code, stderr.String())
 	}
 }
+
+func TestRun_ScanAppendsToAuditLog(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+	logHome := t.TempDir()
+	t.Setenv("AGENT_STACK_AUDIT_HOME", logHome)
+
+	dest := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &stdout, &stderr)
+
+	logPath := filepath.Join(logHome, "audit-log.jsonl")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("expected audit log to exist at %s: %v", logPath, err)
+	}
+	lines := strings.Count(strings.TrimRight(string(data), "\n"), "\n") + 1
+	if lines != 2 {
+		t.Errorf("expected 2 audit log entries after 2 scans, got %d", lines)
+	}
+	if !strings.Contains(string(data), `"conflicts_found":1`) {
+		t.Errorf("expected the fixture's real conflict to be reflected in the audit log, got: %s", data)
+	}
+}
+
+func TestRun_VerifyLogOnEmptyLog(t *testing.T) {
+	t.Setenv("AGENT_STACK_AUDIT_HOME", t.TempDir())
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"verify-log"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 when no scan has run yet", code)
+	}
+	if !strings.Contains(stdout.String(), "belum ada entri") {
+		t.Errorf("expected a 'no entries yet' message, got: %s", stdout.String())
+	}
+}
+
+func TestRun_VerifyLogOnIntactChain(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+	t.Setenv("AGENT_STACK_AUDIT_HOME", t.TempDir())
+
+	dest := t.TempDir()
+	var buf bytes.Buffer
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"verify-log"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0 for an intact chain, stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "OK") {
+		t.Errorf("expected 'OK' in output, got: %s", stdout.String())
+	}
+}
+
+func TestRun_VerifyLogDetectsTampering(t *testing.T) {
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	isolateMemoryTargets(t)
+	logHome := t.TempDir()
+	t.Setenv("AGENT_STACK_AUDIT_HOME", logHome)
+
+	dest := t.TempDir()
+	var buf bytes.Buffer
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+
+	logPath := filepath.Join(logHome, "audit-log.jsonl")
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tampered := strings.Replace(string(data), `"conflicts_found":1`, `"conflicts_found":0`, 1)
+	if tampered == string(data) {
+		t.Fatal("test setup error: nothing was replaced")
+	}
+	if err := os.WriteFile(logPath, []byte(tampered), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"verify-log"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1 for a tampered chain", code)
+	}
+	if !strings.Contains(stdout.String(), "RUSAK") {
+		t.Errorf("expected 'RUSAK' in output, got: %s", stdout.String())
+	}
+}
+
+func TestRun_DiffWithFewerThanTwoEntries(t *testing.T) {
+	t.Setenv("AGENT_STACK_AUDIT_HOME", t.TempDir())
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"diff"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0", code)
+	}
+	if !strings.Contains(stdout.String(), "belum cukup riwayat") {
+		t.Errorf("expected a 'not enough history' message, got: %s", stdout.String())
+	}
+}
+
+func TestRun_DiffShowsDelta(t *testing.T) {
+	isolateMemoryTargets(t)
+	t.Setenv("AGENT_STACK_AUDIT_HOME", t.TempDir())
+	dest := t.TempDir()
+	var buf bytes.Buffer
+
+	// First scan: an empty config, 0 conflicts.
+	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+
+	// Second scan: the real conflict fixture, 1 conflict.
+	fixture := buildTwoSystemConflictFixture(t)
+	t.Setenv("CLAUDE_CONFIG_DIR", fixture)
+	Run([]string{"scan", "--destination", dest}, strings.NewReader(""), &buf, &buf)
+
+	var stdout, stderr bytes.Buffer
+	code := Run([]string{"diff"}, strings.NewReader(""), &stdout, &stderr)
+	if code != 0 {
+		t.Errorf("exit code = %d, want 0, stderr: %s", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "Konflik ditemukan: 0 -> 1 (+1)") {
+		t.Errorf("expected the conflict delta to be reported, got: %s", stdout.String())
+	}
+}

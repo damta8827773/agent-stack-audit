@@ -52,16 +52,26 @@ JSON itself, regardless of what the binary's own version number does.
   zero-day detection. The only module that ever makes a network call, and
   it always prompts for consent first, every scan. See `internal/vulnaudit`
   and [docs/LIMITATIONS.md](LIMITATIONS.md).
+  - ~~an append-only hash-chained audit log~~ **shipped.** Every scan
+    appends a summary-only entry to
+    `~/.agent-stack-audit/audit-log.jsonl` (pattern adapted from
+    `gstack-egress`, not shared code), chained via SHA-256
+    `prev_hash`/`entry_hash`. `agent-stack-audit verify-log` recomputes
+    the chain and reports the first tampered/deleted entry, if any;
+    `agent-stack-audit diff` shows the delta between the two most recent
+    scans, and flags when the two scans ran different `--only` module
+    sets so the delta isn't read as more meaningful than it is. See
+    `internal/auditlog` and
+    [docs/SECURITY_MODEL.md](SECURITY_MODEL.md) section 6 for what this
+    does and, just as importantly, does not guarantee (detection, not
+    prevention - a from-scratch deleted file isn't detectable).
   - **Not yet shipped** (still real v0.2+ scope, larger and riskier to
     rush): scheduled daily runs via OS-native schedulers (cron/systemd
     timer/launchd/Task Scheduler - never a hidden background daemon),
-    an append-only hash-chained audit log (`~/.agent-stack-audit/audit-log.jsonl`,
-    pattern adapted from `gstack-egress`), `agent-stack-audit diff` to
-    show only what changed since the last scan, `agent-stack-audit
-    verify-log` to check the log's hash-chain integrity, and log
-    retention/rotation. `Pipfile.lock`, `composer.json`, and
-    `Gemfile.lock` parsing also aren't implemented yet - only Go, npm,
-    and PyPI in this first pass.
+    and log retention/rotation to `.jsonl.gz` after 90 days (the log
+    just grows unbounded for now - correct but not yet size-managed).
+    `Pipfile.lock`, `composer.json`, and `Gemfile.lock` parsing also
+    aren't implemented yet - only Go, npm, and PyPI in this first pass.
 - Revisit whether `graphify-out/` (project-level generated output) belongs
   in the discover scan - deferred out of v0.1 because it's generated
   output, not installed skill config.

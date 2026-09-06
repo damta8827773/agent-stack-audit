@@ -169,3 +169,16 @@ also the only part of agent-stack-audit that ever makes a network call,
 and it never does so without printing exactly what will be sent and
 waiting for an explicit `y` - every scan, with no flag to silence the
 prompt.
+
+## The audit log detects tampering after the fact, it doesn't prevent it
+
+`~/.agent-stack-audit/audit-log.jsonl`'s hash chain (see
+`internal/auditlog`, `verify-log`, `diff`) makes an *edited* or *deleted*
+entry detectable, because each entry's hash depends on the one before
+it. It cannot detect someone deleting the whole file and starting a new
+chain from nothing, since there's no copy anywhere else to compare
+against - this project has no remote/anchored log, deliberately, since
+that would require a network call on every scan. `verify-log` answers
+"is this specific file's history internally consistent," not "has this
+history ever been reset." See
+[docs/SECURITY_MODEL.md](SECURITY_MODEL.md) section 6.

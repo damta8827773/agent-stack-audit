@@ -1,6 +1,6 @@
 ---
 name: agent-stack-audit
-description: Read-only audit of installed Claude Code skills, plugins, and hooks - reports conflicting hook registrations, estimated token overhead from always-on skills, local memory-store metadata, basic trust findings, and (opt-in, network) known dependency vulnerabilities via OSV.dev. Use when the user asks to audit, check, or list what skills/plugins/hooks are installed, whether any hooks conflict, how much context budget always-on skills are costing, what memory stores exist locally, or whether any dependency has a known CVE.
+description: Read-only audit of installed Claude Code skills, plugins, and hooks - reports conflicting hook registrations, estimated token overhead from always-on skills, local memory-store metadata, basic trust findings, and (opt-in, network) known dependency vulnerabilities via OSV.dev. Every scan also appends to a local hash-chained history that verify-log/diff can check. Use when the user asks to audit, check, or list what skills/plugins/hooks are installed, whether any hooks conflict, how much context budget always-on skills are costing, what memory stores exist locally, whether any dependency has a known CVE, or what changed since the last scan.
 ---
 
 # agent-stack-audit
@@ -37,6 +37,15 @@ plugin, hook, or memory-store file it discovers.
    automatic "y" into it or assume consent on the user's behalf - let the
    user see the prompt and answer it themselves, or explicitly confirm
    with you first that they want it to proceed.
+6. If the user asks what changed since a previous scan, run
+   `agent-stack-audit diff` instead of re-explaining the whole report -
+   it reads the local hash-chained history
+   (`~/.agent-stack-audit/audit-log.jsonl`) and prints only the delta
+   between the two most recent scans.
+7. If the user asks whether their scan history is intact / hasn't been
+   tampered with, run `agent-stack-audit verify-log`. It can only detect
+   an edited or deleted entry, not a wholesale-deleted log file starting
+   fresh - say so if asked, don't imply a stronger guarantee than that.
 
 ## What NOT to do
 

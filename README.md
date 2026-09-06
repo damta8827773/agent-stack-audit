@@ -81,6 +81,32 @@ you type `y` at the prompt - writes them all to
 `<destination>/suggested-fixes.md`. It never edits a plugin/skill's own
 files; applying a suggestion is always something you do yourself.
 
+### Scan history (`verify-log`, `diff`)
+
+Every `scan` appends one summary-only entry to a local, SHA-256
+hash-chained log at `~/.agent-stack-audit/audit-log.jsonl`
+(`AGENT_STACK_AUDIT_HOME` to override). Two commands read it back - real
+output from two scans against this repo's own demo fixture:
+
+```
+$ agent-stack-audit diff
+Dibandingkan: 2026-09-06T14:52:31Z -> 2026-09-06T14:52:31Z
+
+Total skill ditemukan: 4 (tidak berubah)
+Konflik ditemukan: 1 (tidak berubah)
+...
+
+$ agent-stack-audit verify-log
+...audit-log.jsonl: OK - 2 entri, hash-chain utuh.
+```
+
+`verify-log` detects an edited or deleted entry (each entry's hash
+depends on the one before it), it does not prevent tampering, and it
+cannot detect the whole file being deleted and a fresh chain starting
+from nothing - there's no copy anywhere else to compare against. See
+[docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md) section 6 for exactly
+what this guarantees and what it doesn't.
+
 ## What this does NOT do
 
 *(copied verbatim from [docs/LIMITATIONS.md](docs/LIMITATIONS.md) - keep both in sync)*

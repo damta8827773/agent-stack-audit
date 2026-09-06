@@ -27,6 +27,16 @@ func ClaudeMemDataDir() string {
 	return filepath.Join(homeDir(), ".claude-mem")
 }
 
+// AuditLogPath returns the path to the append-only, hash-chained scan
+// history file (CLAUDE.md section 3 / see internal/auditlog), honoring
+// AGENT_STACK_AUDIT_HOME (default: ~/.agent-stack-audit).
+func AuditLogPath() string {
+	if v := os.Getenv("AGENT_STACK_AUDIT_HOME"); v != "" {
+		return filepath.Join(v, "audit-log.jsonl")
+	}
+	return filepath.Join(homeDir(), ".agent-stack-audit", "audit-log.jsonl")
+}
+
 func homeDir() string {
 	h, err := os.UserHomeDir()
 	if err != nil {

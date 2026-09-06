@@ -7,9 +7,10 @@ agent-stack-audit only needs READ access to the config directories it scans
 project-level `.claude/` equivalents, plus the known memory-store
 locations). It never writes to, moves, or deletes anything it finds, except
 its own output files (`report.md`/`report.json`/`suggested-fixes.md`, all
-under `<destination>`, never a plugin/skill's own files). `--fix` is opt-in
-and requires an explicit `y` confirmation before writing anything - never a
-silent bulk operation.
+under `<destination>`, never a plugin/skill's own files) and its own audit
+log (`~/.agent-stack-audit/audit-log.jsonl`, override with
+`AGENT_STACK_AUDIT_HOME`). `--fix` is opt-in and requires an explicit `y`
+confirmation before writing anything - never a silent bulk operation.
 
 ## 2. No data leaves the machine, except one explicit opt-in flag
 
@@ -74,4 +75,27 @@ a weakness of this project specifically. What's actually enforceable:
   merge without review" - it's "external contributors can't merge without
   review and passing CI"; tighten it (`enforce_admins: true`) once there's
   a second regular contributor who can actually review the owner's PRs.
+
+## 6. The audit log detects tampering, it does not prevent it
+
+`~/.agent-stack-audit/audit-log.jsonl` is a plain, user-writable local
+file. Nothing about SHA-256 hashing a chain of entries stops someone with
+filesystem access from editing or deleting it - that would require an
+external anchor (a remote append-only service, a TPM, a blockchain
+timestamp) that this project deliberately doesn't have, since adding one
+would mean a network call on every scan, contradicting the "zero network
+by default" principle above.
+
+What the hash chain actually buys: `agent-stack-audit verify-log`
+recomputes every entry's hash and will notice if any entry was edited
+after the fact (its stored `entry_hash` stops matching its own content)
+or removed (the next entry's `prev_hash` stops matching anything above
+it). See `internal/auditlog/auditlog_test.go`'s
+`TestVerify_DetectsEditedEntryContent` and
+`TestVerify_DetectsDeletedEntry` for both cases actually exercised, not
+just asserted in prose. What it cannot detect: someone deleting the
+*entire* file and letting a fresh chain start from nothing - there is no
+external record to compare a from-scratch file against. That's a real,
+disclosed limit, not an oversight; see
+[docs/LIMITATIONS.md](LIMITATIONS.md).
 
