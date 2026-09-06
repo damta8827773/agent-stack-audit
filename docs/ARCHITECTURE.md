@@ -42,7 +42,7 @@ internal/conflict/       hook event+matcher overlap detection (CONFIRMED/LIKELY/
 internal/tokencost/      char-ratio token estimate for always-on skills
 internal/memoryaudit/    metadata-only report on known memory stores, schema-only SQLite read
 internal/trustreport/    LICENSE/SECURITY.md presence, world-writable dirs, network-calling hooks, undocumented scripts
-internal/vulnaudit/      go.mod/package.json/requirements.txt manifest parsing + OSV.dev query (opt-in, --vuln-check)
+internal/vulnaudit/      go.mod/npm/PyPI/Packagist/RubyGems manifest parsing + OSV.dev query (opt-in, --vuln-check)
 internal/fix/            CONFIRMED-conflict suggestions for --fix; never edits another tool's files
 internal/auditlog/       append-only, SHA-256 hash-chained scan history (~/.agent-stack-audit/); verify-log/diff read it back
 internal/report/         DTOs matching report.json's schema, aggregator, JSON writer, Markdown writer

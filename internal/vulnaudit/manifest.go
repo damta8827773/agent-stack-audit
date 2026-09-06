@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"golang.org/x/mod/modfile"
@@ -45,6 +46,9 @@ func FindManifests(dirs []string) []Dependency {
 		deps = append(deps, parseGoMod(dir)...)
 		deps = append(deps, parseNodeManifest(dir)...)
 		deps = append(deps, parseRequirementsTxt(dir)...)
+		deps = append(deps, parsePipfileLock(dir)...)
+		deps = append(deps, parseComposerManifest(dir)...)
+		deps = append(deps, parseGemfileLock(dir)...)
 	}
 	return deps
 }
@@ -202,6 +206,159 @@ func parseRequirementsTxt(dir string) []Dependency {
 			if name != "" && version != "" {
 				deps = append(deps, Dependency{Ecosystem: "PyPI", Name: name, Version: version, SourcePath: path})
 			}
+		}
+	}
+	return deps
+}
+
+// parsePipfileLock reads Pipfile.lock's "default" and "develop" sections.
+// Unlike requirements.txt, every entry here is already a resolved lock
+// ("==x.y.z"), not a declared range - the only entries skipped are ones
+// with no "version" field at all (a VCS/editable/local-path install,
+// which has no PyPI version to look up).
+func parsePipfileLock(dir string) []Dependency {
+	path := filepath.Join(dir, "Pipfile.lock")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var lock struct {
+		Default map[string]struct {
+			Version string `json:"version"`
+		} `json:"default"`
+		Develop map[string]struct {
+			Version string `json:"version"`
+		} `json:"develop"`
+	}
+	if json.Unmarshal(data, &lock) != nil {
+		return nil
+	}
+	var deps []Dependency
+	for name, info := range lock.Default {
+		if v := strings.TrimPrefix(info.Version, "=="); v != "" {
+			deps = append(deps, Dependency{Ecosystem: "PyPI", Name: name, Version: v, SourcePath: path})
+		}
+	}
+	for name, info := range lock.Develop {
+		if v := strings.TrimPrefix(info.Version, "=="); v != "" {
+			deps = append(deps, Dependency{Ecosystem: "PyPI", Name: name, Version: v, SourcePath: path})
+		}
+	}
+	return deps
+}
+
+// parseComposerManifest mirrors parseNodeManifest's lockfile-over-manifest
+// preference: composer.lock has exact installed versions, composer.json's
+// "require"/"require-dev" only has declared ranges ("^2.5"). PHP itself
+// and extension pseudo-packages ("php", "ext-json", ...) are filtered out
+// - they have no "/" in their name and aren't real Packagist packages, so
+// querying OSV for them would be meaningless.
+func parseComposerManifest(dir string) []Dependency {
+	lockPath := filepath.Join(dir, "composer.lock")
+	if data, err := os.ReadFile(lockPath); err == nil {
+		if deps := parseComposerLock(data, lockPath); deps != nil {
+			return deps
+		}
+	}
+
+	manifestPath := filepath.Join(dir, "composer.json")
+	data, err := os.ReadFile(manifestPath)
+	if err != nil {
+		return nil
+	}
+	var manifest struct {
+		Require    map[string]string `json:"require"`
+		RequireDev map[string]string `json:"require-dev"`
+	}
+	if json.Unmarshal(data, &manifest) != nil {
+		return nil
+	}
+	var deps []Dependency
+	for name, rangeSpec := range manifest.Require {
+		if !strings.Contains(name, "/") {
+			continue // "php", "ext-*": platform requirements, not Packagist packages
+		}
+		if v := exactVersion(rangeSpec); v != "" {
+			deps = append(deps, Dependency{Ecosystem: "Packagist", Name: name, Version: v, SourcePath: manifestPath})
+		}
+	}
+	for name, rangeSpec := range manifest.RequireDev {
+		if !strings.Contains(name, "/") {
+			continue
+		}
+		if v := exactVersion(rangeSpec); v != "" {
+			deps = append(deps, Dependency{Ecosystem: "Packagist", Name: name, Version: v, SourcePath: manifestPath})
+		}
+	}
+	return deps
+}
+
+func parseComposerLock(data []byte, path string) []Dependency {
+	var lock struct {
+		Packages []struct {
+			Name    string `json:"name"`
+			Version string `json:"version"`
+		} `json:"packages"`
+		PackagesDev []struct {
+			Name    string `json:"name"`
+			Version string `json:"version"`
+		} `json:"packages-dev"`
+	}
+	if json.Unmarshal(data, &lock) != nil {
+		return nil
+	}
+	var deps []Dependency
+	for _, p := range append(lock.Packages, lock.PackagesDev...) {
+		if p.Name == "" || p.Version == "" {
+			continue
+		}
+		// Composer versions are sometimes tagged "v2.5.0" - strip the
+		// leading "v" the same way parseGoMod strips Go's "v" prefix.
+		v := strings.TrimPrefix(p.Version, "v")
+		deps = append(deps, Dependency{Ecosystem: "Packagist", Name: p.Name, Version: v, SourcePath: path})
+	}
+	return deps
+}
+
+// gemfileLockSpecPattern matches exactly a top-level resolved spec line
+// inside Gemfile.lock's "specs:" block: 4 spaces of indent, a gem name, a
+// version in parens. A dependency-constraint line one level deeper (e.g.
+// "      activesupport (= 7.0.4)" under "actionpack (7.0.4)") has 6+
+// spaces of indent and deliberately does not match - it names a
+// constraint on another gem, not a second resolved entry for it.
+var gemfileLockSpecPattern = regexp.MustCompile(`^    (\S+) \(([^)]+)\)\s*$`)
+
+// parseGemfileLock reads every "specs:" block in Gemfile.lock (there can
+// be more than one - a GEM source and a GIT source each have their own).
+// Every top-level spec line is already a resolved, exact version - this
+// is a lockfile, not a manifest with ranges.
+func parseGemfileLock(dir string) []Dependency {
+	path := filepath.Join(dir, "Gemfile.lock")
+	f, err := os.Open(path)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+
+	var deps []Dependency
+	inSpecs := false
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		trimmed := strings.TrimRight(line, " \t")
+		if trimmed == "  specs:" {
+			inSpecs = true
+			continue
+		}
+		if !inSpecs {
+			continue
+		}
+		if trimmed == "" || !strings.HasPrefix(line, "    ") {
+			inSpecs = false // dedent out of the specs: block (blank line or a new top-level section)
+			continue
+		}
+		if m := gemfileLockSpecPattern.FindStringSubmatch(line); m != nil {
+			deps = append(deps, Dependency{Ecosystem: "RubyGems", Name: m[1], Version: m[2], SourcePath: path})
 		}
 	}
 	return deps

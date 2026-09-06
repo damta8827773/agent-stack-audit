@@ -88,8 +88,9 @@ Scan flags:
                          offer to write them to <destination>/suggested-fixes.md (asks for
                          confirmation first; never edits any plugin/skill file itself)
   --vuln-check          check discovered skills'/plugins' dependency manifests (go.mod,
-                         package.json, requirements.txt) against OSV.dev's public
-                         vulnerability database. Sends package name+version only, never
+                         package.json/package-lock.json, requirements.txt/Pipfile.lock,
+                         composer.json/composer.lock, Gemfile.lock) against OSV.dev's
+                         public vulnerability database. Sends package name+version only, never
                          file content - shows an explicit consent prompt before any
                          network call, every scan (this is the only network-touching flag)
 
@@ -461,7 +462,7 @@ func runVulnCheck(entries []discover.SkillEntry, stdin io.Reader, stdout io.Writ
 	dirs := skillPluginDirs(entries)
 	deps := vulnaudit.FindManifests(dirs)
 	if len(deps) == 0 {
-		fmt.Fprintln(stdout, "vuln-check: tidak ada manifest dependency (go.mod/package.json/requirements.txt) ditemukan.")
+		fmt.Fprintln(stdout, "vuln-check: tidak ada manifest dependency (go.mod/package.json/requirements.txt/Pipfile.lock/composer.json/Gemfile.lock) ditemukan.")
 		return nil
 	}
 	return vulnaudit.NewQuerier().Query(deps)

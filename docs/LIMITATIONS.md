@@ -159,12 +159,19 @@ boundaries that matter:
   manifests" - it says nothing about custom code, misconfigurations, or
   anything a professional security review would catch.
 
-Only three ecosystems are parsed in v0.1 (Go, npm, PyPI), and even then
-only exact pinned versions count - a `package.json` range like `^1.2.3`
-or a `requirements.txt` line like `flask>=2.0.0` is skipped rather than
-guessed at (see `exactVersion`/`parseRequirementsTxt` in
+Five ecosystems are parsed (Go via `go.mod`; npm via
+`package-lock.json`/`package.json`; PyPI via `requirements.txt`/
+`Pipfile.lock`; Packagist via `composer.lock`/`composer.json`; RubyGems
+via `Gemfile.lock`), and even then only exact pinned versions count - a
+`package.json` range like `^1.2.3` or a `requirements.txt` line like
+`flask>=2.0.0` is skipped rather than guessed at (see
+`exactVersion`/`parseRequirementsTxt` in
 `internal/vulnaudit/manifest.go`), because querying OSV with a guessed
-version would be worse than not checking that package at all. This is
+version would be worse than not checking that package at all.
+`Gemfile.lock` and the two lockfiles (`package-lock.json`,
+`composer.lock`) don't have this problem - a lockfile's whole purpose is
+recording the exact resolved version, so every entry found there is
+used as-is. This is
 also the only part of agent-stack-audit that ever makes a network call,
 and it never does so without printing exactly what will be sent and
 waiting for an explicit `y` - every scan, with no flag to silence the

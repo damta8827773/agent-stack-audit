@@ -53,7 +53,7 @@ them (auto-detected - degrades to plain text otherwise, as shown here).
 | `token-cost` | Estimates context-window overhead from always-on skill instructions |
 | `memory-audit` | Reports metadata (path, size, last-write time, permission) for known local memory stores - never their content |
 | `trust-report` | Flags missing LICENSE/SECURITY.md, world-writable skill dirs, hooks calling external URLs or raw IP addresses, undocumented executable scripts, generic/buzzword-heavy skill descriptions, base64-blob/eval-obfuscation patterns in hook commands and script content |
-| `vuln-audit` (opt-in, `--vuln-check`) | Matches Go/npm/PyPI dependency manifests against OSV.dev's public advisory database - the only module that makes a network call, and only after an explicit consent prompt every scan |
+| `vuln-audit` (opt-in, `--vuln-check`) | Matches Go/npm/PyPI/Packagist/RubyGems dependency manifests against OSV.dev's public advisory database - the only module that makes a network call, and only after an explicit consent prompt every scan |
 
 A real `conflict-check` finding, reproducing an actual conflict found during
 this project's own research (claude-mem and superpowers both register
@@ -266,11 +266,14 @@ boundaries that matter:
   manifests" - it says nothing about custom code, misconfigurations, or
   anything a professional security review would catch.
 
-Only three ecosystems are parsed in v0.1 (Go, npm, PyPI), and even then
-only exact pinned versions count - a `package.json` range like `^1.2.3`
-or a `requirements.txt` line like `flask>=2.0.0` is skipped rather than
-guessed at, because querying OSV with a guessed version would be worse
-than not checking that package at all. This is also the only part of
+Five ecosystems are parsed (Go, npm, PyPI, Packagist, RubyGems), via
+`go.mod`, `package-lock.json`/`package.json`, `requirements.txt`/
+`Pipfile.lock`, `composer.lock`/`composer.json`, and `Gemfile.lock` -
+and even then only exact pinned versions count: a `package.json` range
+like `^1.2.3` or a `requirements.txt` line like `flask>=2.0.0` is
+skipped rather than guessed at, because querying OSV with a guessed
+version would be worse than not checking that package at all. This is
+also the only part of
 agent-stack-audit that ever makes a network call, and it never does so
 without printing exactly what will be sent and waiting for an explicit
 `y` - every scan, with no flag to silence the prompt.

@@ -179,6 +179,151 @@ func TestFindManifests_MultipleDirs(t *testing.T) {
 	}
 }
 
+func TestFindManifests_PipfileLock(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "Pipfile.lock"), `{
+		"_meta": {"hash": {"sha256": "abc"}},
+		"default": {
+			"requests": {"hashes": ["sha256:abc"], "version": "==2.31.0"},
+			"editable-local": {"path": "./vendor/local"}
+		},
+		"develop": {
+			"pytest": {"version": "==7.4.0"}
+		}
+	}`)
+	deps := FindManifests([]string{dir})
+	byName := map[string]Dependency{}
+	for _, d := range deps {
+		byName[d.Name] = d
+	}
+	if d, ok := byName["requests"]; !ok || d.Version != "2.31.0" || d.Ecosystem != "PyPI" {
+		t.Errorf("unexpected entry for requests: %+v (found=%v)", d, ok)
+	}
+	if d, ok := byName["pytest"]; !ok || d.Version != "7.4.0" {
+		t.Errorf("expected develop-section pytest to be included: %+v (found=%v)", d, ok)
+	}
+	if _, ok := byName["editable-local"]; ok {
+		t.Error("an entry with no version field (editable/VCS install) should be skipped")
+	}
+}
+
+func TestFindManifests_ComposerLockPreferredOverComposerJSON(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "composer.json"), `{"require": {"monolog/monolog": "^2.5"}}`)
+	writeFile(t, filepath.Join(dir, "composer.lock"), `{
+		"packages": [
+			{"name": "monolog/monolog", "version": "v2.5.0"}
+		],
+		"packages-dev": [
+			{"name": "phpunit/phpunit", "version": "9.6.1"}
+		]
+	}`)
+	deps := FindManifests([]string{dir})
+	byName := map[string]Dependency{}
+	for _, d := range deps {
+		byName[d.Name] = d
+	}
+	if d, ok := byName["monolog/monolog"]; !ok || d.Version != "2.5.0" || d.Ecosystem != "Packagist" {
+		t.Errorf("expected the lockfile's exact version with 'v' stripped, got: %+v (found=%v)", d, ok)
+	}
+	if d, ok := byName["phpunit/phpunit"]; !ok || d.Version != "9.6.1" {
+		t.Errorf("expected packages-dev to be included: %+v (found=%v)", d, ok)
+	}
+}
+
+func TestFindManifests_ComposerJSONWithoutLockfile(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "composer.json"), `{
+		"require": {
+			"php": ">=8.1",
+			"ext-json": "*",
+			"monolog/monolog": "2.5.0"
+		},
+		"require-dev": {"phpunit/phpunit": "^9.6"}
+	}`)
+	deps := FindManifests([]string{dir})
+	byName := map[string]Dependency{}
+	for _, d := range deps {
+		byName[d.Name] = d
+	}
+	if _, ok := byName["php"]; ok {
+		t.Error("php platform requirement should never be treated as a Packagist package")
+	}
+	if _, ok := byName["ext-json"]; ok {
+		t.Error("ext-* platform requirement should never be treated as a Packagist package")
+	}
+	if d, ok := byName["monolog/monolog"]; !ok || d.Version != "2.5.0" {
+		t.Errorf("expected exact-pinned monolog/monolog: %+v (found=%v)", d, ok)
+	}
+	// "^9.6" has its "^" stripped by exactVersion, same as npm's "^"/"~"
+	// handling (see TestFindManifests_PackageJSONWithoutLockfile) - this
+	// is shared, existing behavior, not something new to Packagist.
+	if d, ok := byName["phpunit/phpunit"]; !ok || d.Version != "9.6" {
+		t.Errorf("expected '^' stripped from phpunit/phpunit version: %+v (found=%v)", d, ok)
+	}
+}
+
+func TestFindManifests_GemfileLock(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "Gemfile.lock"), `GEM
+  remote: https://rubygems.org/
+  specs:
+    actionpack (7.0.4)
+      actionview (= 7.0.4)
+      activesupport (= 7.0.4)
+    actionview (7.0.4)
+      activesupport (= 7.0.4)
+    activesupport (7.0.4)
+    rake (13.0.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  actionpack
+  rake
+
+BUNDLED WITH
+   2.3.7
+`)
+	deps := FindManifests([]string{dir})
+	byName := map[string]Dependency{}
+	for _, d := range deps {
+		byName[d.Name] = d
+	}
+	if len(deps) != 4 {
+		t.Fatalf("expected exactly 4 resolved specs (not the nested constraint lines), got %d: %+v", len(deps), deps)
+	}
+	for _, want := range []struct{ name, version string }{
+		{"actionpack", "7.0.4"},
+		{"actionview", "7.0.4"},
+		{"activesupport", "7.0.4"},
+		{"rake", "13.0.6"},
+	} {
+		d, ok := byName[want.name]
+		if !ok || d.Version != want.version || d.Ecosystem != "RubyGems" {
+			t.Errorf("unexpected entry for %s: %+v (found=%v)", want.name, d, ok)
+		}
+	}
+}
+
+func TestFindManifests_GemfileLock_StopsAtNextSection(t *testing.T) {
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, "Gemfile.lock"), `GEM
+  remote: https://rubygems.org/
+  specs:
+    rake (13.0.6)
+
+PLATFORMS
+  ruby
+    fake-gem-that-looks-indented (1.0.0)
+`)
+	deps := FindManifests([]string{dir})
+	if len(deps) != 1 || deps[0].Name != "rake" {
+		t.Fatalf("expected only rake, PLATFORMS section content must not leak in as a dependency: %+v", deps)
+	}
+}
+
 func TestFindManifests_DuplicateDirsScannedOnce(t *testing.T) {
 	dir := t.TempDir()
 	writeFile(t, filepath.Join(dir, "requirements.txt"), "a==1.0.0\n")

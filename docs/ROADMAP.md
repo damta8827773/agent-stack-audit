@@ -47,11 +47,18 @@ JSON itself, regardless of what the binary's own version number does.
   matching, not a claim of actual malware analysis - see
   [docs/LIMITATIONS.md](LIMITATIONS.md).
 - ~~`vuln-audit` module~~ **shipped early as a preview** (`--vuln-check`).
-  Matches Go/npm/PyPI dependency manifests against OSV.dev - version
-  matching against a public advisory database, not SAST/DAST, not
-  zero-day detection. The only module that ever makes a network call, and
-  it always prompts for consent first, every scan. See `internal/vulnaudit`
-  and [docs/LIMITATIONS.md](LIMITATIONS.md).
+  Matches Go/npm/PyPI/Packagist/RubyGems dependency manifests against
+  OSV.dev - version matching against a public advisory database, not
+  SAST/DAST, not zero-day detection. The only module that ever makes a
+  network call, and it always prompts for consent first, every scan. See
+  `internal/vulnaudit` and [docs/LIMITATIONS.md](LIMITATIONS.md).
+  - ~~`Pipfile.lock`, `composer.json`/`composer.lock`, `Gemfile.lock`
+    parsing~~ **shipped**, completing Lampiran K.3's five-ecosystem
+    scope. `Gemfile.lock` parsing verified live end to end against
+    OSV.dev during development (`rack 2.0.6` - 35 real GHSA advisories
+    returned with correct severities and fix versions), the same way
+    the original Go/npm/PyPI path was verified against `lodash`/
+    `minimist` when vuln-audit first shipped.
   - ~~an append-only hash-chained audit log~~ **shipped.** Every scan
     appends a summary-only entry to
     `~/.agent-stack-audit/audit-log.jsonl` (pattern adapted from
@@ -70,8 +77,6 @@ JSON itself, regardless of what the binary's own version number does.
     timer/launchd/Task Scheduler - never a hidden background daemon),
     and log retention/rotation to `.jsonl.gz` after 90 days (the log
     just grows unbounded for now - correct but not yet size-managed).
-    `Pipfile.lock`, `composer.json`, and `Gemfile.lock` parsing also
-    aren't implemented yet - only Go, npm, and PyPI in this first pass.
 - Revisit whether `graphify-out/` (project-level generated output) belongs
   in the discover scan - deferred out of v0.1 because it's generated
   output, not installed skill config.

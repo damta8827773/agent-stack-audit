@@ -44,3 +44,13 @@ is called out here.
   entry; new `agent-stack-audit diff` command shows the delta between
   the two most recent scans. Detects tampering, does not prevent it -
   see docs/SECURITY_MODEL.md section 6.
+- `vuln-audit`: three more ecosystems parsed - `Pipfile.lock` (PyPI),
+  `composer.lock`/`composer.json` (Packagist), `Gemfile.lock`
+  (RubyGems) - alongside the existing Go/npm/PyPI support, completing
+  Lampiran K.3's five-ecosystem scope. Verified live against OSV.dev
+  during development (`rack 2.0.6` via a `Gemfile.lock` fixture
+  returned 35 real GHSA advisories).
+- Moved `CLAUDE.md` into the repo it governs - it was previously one
+  directory up, outside any git repository, despite its own header
+  claiming to be "checked into the codebase." Also fixed a dangling
+  reference to a file (`agent-stack-audit-spec.md`) that never existed.
